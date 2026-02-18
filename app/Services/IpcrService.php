@@ -11,6 +11,16 @@ class IpcrService
     {
         return DB::transaction(function () use ($data) {
             $ipcrData = $data['ipcr'];
+
+            $alreadyExists = Ipcr::where('userid', $ipcrData['userid'])
+                ->where('year', $ipcrData['year'])
+                ->where('semester', $ipcrData['semester'])
+                ->exists();
+
+            if ($alreadyExists) {
+                throw new \Exception('IPCR already exists for this year and semester.');
+            }
+
             $user = \App\Models\User::find($ipcrData['userid']);
             
             // Automate Signatories
@@ -18,6 +28,7 @@ class IpcrService
             $ipcrData['supervisor_id'] = $signatories['supervisor_id'];
             $ipcrData['division_head'] = $signatories['division_head'];
             $ipcrData['highest_supervisor'] = $signatories['highest_supervisor'];
+            $ipcrData['pmt_id'] = null;
             
             // Set default distributions if not provided
             $ipcrData['core_percentage_distribution'] = $ipcrData['core_percentage_distribution'] ?? 50;
@@ -259,6 +270,8 @@ class IpcrService
     {
         $ipcr = Ipcr::findOrFail($id);
         $oldStatus = $ipcr->status;
+        $actingUser = \App\Models\User::find($userId);
+        $isPmtUser = $actingUser ? $actingUser->isPmt() : false;
         
         if ($ipcr->status === 'Target Submitted') {
             $ipcr->status = 'Target Approved';
@@ -267,7 +280,11 @@ class IpcrService
         } elseif ($ipcr->status === 'Supervisor Approved') {
             $ipcr->status = 'Division Head Approved';
         } elseif ($ipcr->status === 'Division Head Approved') {
+            if ($ipcr->highest_supervisor && $ipcr->highest_supervisor != $userId && !$isPmtUser) {
+                throw new \Exception("Only PMT can approve this stage.");
+            }
             $ipcr->status = 'PMT Approved';
+            $ipcr->pmt_id = $userId;
         } else {
             return $ipcr; // No transition
         }
@@ -360,7 +377,7 @@ class IpcrService
         return [
             'supervisor_id' => $sectionHead ?? 1, // Fallback to 1 for dev
             'division_head' => $divisionHead,
-            'highest_supervisor' => 1, // PMT usually static or admin roles
+            'highest_supervisor' => 35, // DR. AGOS ID
         ];
     }
 

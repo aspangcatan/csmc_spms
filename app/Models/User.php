@@ -48,7 +48,7 @@ class User extends Authenticatable
     public function getProfilePhotoUrlAttribute()
     {
         return $this->picture 
-            ? "http://192.168.5.4/hris/avatar/{$this->picture}" 
+            ? "https://dohcsmc.com/id/storage/crop/{$this->picture}" 
             : "https://ui-avatars.com/api/?name=" . urlencode($this->name) . "&background=f06a38&color=fff";
     }
 
@@ -102,6 +102,20 @@ class User extends Authenticatable
     public function isDivisionHead()
     {
         return \Illuminate\Support\Facades\DB::connection('user')->table('division')->where('head', $this->id)->exists();
+    }
+
+    public function isPmt()
+    {
+        try {
+            return \Illuminate\Support\Facades\DB::connection('user')
+                ->table('user_priv')
+                ->where('user_id', $this->id)
+                ->where('syscode', 'e-spms')
+                ->where('level', 'PMT')
+                ->exists();
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

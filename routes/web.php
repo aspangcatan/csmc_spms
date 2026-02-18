@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\IpcrController;
+use App\Http\Controllers\DivisionHeadApprovalController;
+use App\Http\Controllers\PmtApprovalController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -57,11 +59,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/spcr', [\App\Http\Controllers\SpcrController::class, 'index'])->name('spcr.index');
     Route::get('/spcr/staff', [\App\Http\Controllers\SpcrController::class, 'staff'])->name('spcr.staff');
     Route::get('/spcr/{id}/print', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print');
+    Route::get('/division-head/approvals', [DivisionHeadApprovalController::class, 'index'])->name('division_head.approvals');
+    Route::get('/pmt/approvals', [PmtApprovalController::class, 'index'])->name('pmt.approvals');
     Route::prefix('api/spcr')->group(function () {
         Route::get('/by-semester', [\App\Http\Controllers\SpcrController::class, 'getByYearSemester']);
         Route::post('/', [\App\Http\Controllers\SpcrController::class, 'store']);
         Route::get('/{id}', [\App\Http\Controllers\SpcrController::class, 'show']);
         Route::get('/{id}/logs', [\App\Http\Controllers\SpcrController::class, 'getLogs']);
+        Route::put('/{id}', [\App\Http\Controllers\SpcrController::class, 'update']);
         Route::post('/{id}/submit', [\App\Http\Controllers\SpcrController::class, 'submit']);
         Route::post('/{id}/approve', [\App\Http\Controllers\SpcrController::class, 'approve']);
         Route::delete('/{id}', [\App\Http\Controllers\SpcrController::class, 'destroy']);
@@ -69,6 +74,3 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/entry/{entryId}/accomplishment', [\App\Http\Controllers\SpcrController::class, 'addAccomplishment']);
     });
 });
-
-
-

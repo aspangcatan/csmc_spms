@@ -273,8 +273,8 @@
                 <td style="width: 33%;" class="center">
                     <p class="bold">Final Rating By:</p>
                     <div class="signature-space"></div>
-                    <p class="bold underline">{{ $spcr->pmt->name ?? 'Next Higher Supervisor' }}</p>
-                    <p>PMT / Approver</p>
+                    <p class="bold underline">{{ $spcr->highestSupervisor->name ?? 'Next Higher Supervisor' }}</p>
+                    <p>Next Higher Supervisor</p>
                 </td>
             </tr>
         </table>

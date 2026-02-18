@@ -122,6 +122,8 @@
 
 @push('scripts')
     <script>
+        window.ipcrApiBaseUrl = window.ipcrApiBaseUrl || @json(url('/api/ipcr'));
+        window.ipcrBySemesterUrl = window.ipcrBySemesterUrl || @json(url('/api/ipcr/by-semester'));
         let currentIpcrId = null;
         let currentYear = new Date().getFullYear();
         let currentSemester = 1;
@@ -140,6 +142,7 @@
 
             $('#viewIpcrBtn').click(function () {
                 if (currentIpcrId) {
+                    window.ipcrModalMode = 'view';
                     loadIPCR(currentIpcrId);
                     $('#ipcrModal').modal('show');
                 } else {
@@ -155,7 +158,7 @@
             const userId = {{ Auth::id() }};
             const container = $('#ipcrLogsContainer');
             
-            fetch(`/api/ipcr/by-semester?user_id=${userId}&year=${currentYear}&semester=${currentSemester}`)
+            fetch(`${window.ipcrBySemesterUrl}?user_id=${userId}&year=${currentYear}&semester=${currentSemester}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.id) {
@@ -174,7 +177,7 @@
         }
 
         function loadIpcrLogs(ipcrId) {
-            fetch(`/api/ipcr/${ipcrId}/logs`)
+            fetch(`${window.ipcrApiBaseUrl}/${ipcrId}/logs`)
                 .then(response => response.json())
                 .then(logs => {
                     displayLogs(logs);
@@ -233,6 +236,7 @@
         }
 
         function createIpcr(){
+            window.ipcrModalMode = 'create';
             window.currentCreatingSemester = currentSemester;
             window.currentCreatingYear = currentYear;
             $('#ipcrId').val('');
@@ -250,7 +254,7 @@
                 'Are you sure you want to delete this IPCR and all its targets/accomplishments? This action cannot be undone.',
                 'DELETE',
                 () => {
-                    fetch(`/api/ipcr/${currentIpcrId}`, {
+                    fetch(`${window.ipcrApiBaseUrl}/${currentIpcrId}`, {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),

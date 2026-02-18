@@ -71,9 +71,12 @@ class IpcrController extends Controller
             'strategic_functions.*.remarks' => 'nullable|string',
         ]);
 
-        $ipcr = $this->ipcrService->createIpcrWithFunctions($validated);
-
-        return response()->json($ipcr, 201);
+        try {
+            $ipcr = $this->ipcrService->createIpcrWithFunctions($validated);
+            return response()->json($ipcr, 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
 
@@ -255,8 +258,12 @@ class IpcrController extends Controller
     {
         $userId = $request->query('user_id') ?? auth()->id() ?? 1;
         $comments = $request->input('comments');
-        $ipcr = $this->ipcrService->approveIpcr($id, $userId, $comments);
-        return response()->json($ipcr);
+        try {
+            $ipcr = $this->ipcrService->approveIpcr($id, $userId, $comments);
+            return response()->json($ipcr);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
     }
 
     public function submit(Request $request, $id)

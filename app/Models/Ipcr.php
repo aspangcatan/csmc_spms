@@ -17,6 +17,7 @@ class Ipcr extends Model
         'section_head',
         'division_head',
         'highest_supervisor',
+        'pmt_id',
         'period_from',
         'period_to',
         'ipcr_date',
@@ -39,6 +40,21 @@ class Ipcr extends Model
     public function supervisor()
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function divisionHead()
+    {
+        return $this->belongsTo(User::class, 'division_head');
+    }
+
+    public function highestSupervisor()
+    {
+        return $this->belongsTo(User::class, 'highest_supervisor');
+    }
+
+    public function pmt()
+    {
+        return $this->belongsTo(User::class, 'pmt_id');
     }
 
     public function coreFunctions()

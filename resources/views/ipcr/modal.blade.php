@@ -218,6 +218,8 @@
 
 @pushOnce('scripts')
 <script>
+    window.ipcrApiBaseUrl = window.ipcrApiBaseUrl || @json(url('/api/ipcr'));
+    window.ipcrPrintBaseUrl = window.ipcrPrintBaseUrl || @json(url('/ipcr/print'));
     window.authUserId = window.authUserId || {{ auth()->id() ?? 1 }};
 
     $(document).ready(function () {
@@ -225,7 +227,7 @@
         // Handle modal shown event
         $('#ipcrModal').on('shown.bs.modal', function () {
             // If creating new IPCR, set semester and year from index page
-            if (window.currentCreatingSemester && window.currentCreatingYear) {
+            if (window.ipcrModalMode === 'create' && window.currentCreatingSemester && window.currentCreatingYear) {
                 $('#ipcrSemester').val(window.currentCreatingSemester);
                 $('#ipcrYear').val(window.currentCreatingYear);
                 $('#ipcrId').val('');
@@ -250,10 +252,13 @@
 
                 // loadSupervisors(); // Removed as we use automated values
             }
+            window.ipcrModalMode = null;
+            window.currentCreatingSemester = null;
+            window.currentCreatingYear = null;
         });
 
         function loadSupervisors(selectedSupervisorId = null, selectedDHId = null, selectedPMTId = null) {
-            fetch('/api/ipcr/supervisors')
+            fetch(`${window.ipcrApiBaseUrl}/supervisors`)
                 .then(res => res.json())
                 .then(users => {
                     const svSelect = $('#supervisor_id');
@@ -322,7 +327,7 @@
             `Are you sure you want to ${action} for this IPCR?`,
             'APPROVE',
             () => {
-                fetch(`/api/ipcr/${ipcrId}/approve`, {
+                fetch(`${window.ipcrApiBaseUrl}/${ipcrId}/approve`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -339,6 +344,7 @@
                     toast('IPCR Approved successfully!');
                     $('#ipcrModal').modal('hide');
                     if (typeof loadIpcrBySemester === 'function') loadIpcrBySemester();
+                    if (window.IPCR_CONTEXT === 'staff') window.location.reload();
                     if (typeof fetchApprovals === 'function') fetchApprovals();
                 })
                 .catch(err => {
@@ -363,12 +369,8 @@
         let payload = {
             ipcr: {
                 userid: window.authUserId,
-                // Supervisor fields handled in backend
-                // supervisor_id: ..., 
-                // division_head: ...,
-                // highest_supervisor: ...,
-                period_from: "2025-12-12",
-                period_to:"2025-12-15",
+                period_from: semester === 1 ? `${year}-01-01` : `${year}-07-01`,
+                period_to: semester === 1 ? `${year}-06-30` : `${year}-12-31`,
                 year: year,
                 semester: semester,
                 date_done: $('#dateDone').val(),
@@ -385,7 +387,7 @@
         console.log("Saving IPCR payload:", payload);
 
         const method = ipcrId ? "PUT" : "POST";
-        const url = ipcrId ? `/api/ipcr/${ipcrId}` : "/api/ipcr";
+        const url = ipcrId ? `${window.ipcrApiBaseUrl}/${ipcrId}` : window.ipcrApiBaseUrl;
 
         fetch(url, {
             method: method,
@@ -416,7 +418,7 @@
             .then(data => {
                 if (data) {
                     if (isSubmit) {
-                        return fetch(`/api/ipcr/${data.id || ipcrId}/submit`, {
+                        return fetch(`${window.ipcrApiBaseUrl}/${data.id || ipcrId}/submit`, {
                             method: 'POST',
                             headers: {
                                 "Content-Type": "application/json",
@@ -450,7 +452,7 @@
             return;
         }
         // Open print view in new tab
-        window.open(`/ipcr/print/${ipcrId}`, '_blank');
+        window.open(`${window.ipcrPrintBaseUrl}/${ipcrId}`, '_blank');
     }
 
 
@@ -480,7 +482,7 @@
 
 
     function loadIPCR(ipcrId) {
-        fetch(`/api/ipcr/${ipcrId}`)
+        fetch(`${window.ipcrApiBaseUrl}/${ipcrId}`)
             .then(response => {
                 if (!response.ok) throw new Error('Failed to fetch IPCR details');
                 return response.json();

@@ -16,6 +16,7 @@ class Spcr extends Model
         'semester',
         'supervisor_id',
         'division_head_id',
+        'highest_supervisor',
         'pmt_id',
         'status',
         'final_average_rating',
@@ -39,6 +40,11 @@ class Spcr extends Model
     public function supervisor()
     {
         return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    public function highestSupervisor()
+    {
+        return $this->belongsTo(User::class, 'highest_supervisor');
     }
 
     public function pmt()

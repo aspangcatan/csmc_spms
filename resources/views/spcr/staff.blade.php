@@ -151,6 +151,7 @@
 
 @push('scripts')
 <script>
+    window.SPCR_CONTEXT = 'staff';
     const currentYear = {{ $year }};
     const currentSemester = {{ (date('n') <= 6 ? 1 : 2) }};
     let currentSpcrId = null; 

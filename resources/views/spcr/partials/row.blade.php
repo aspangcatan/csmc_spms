@@ -27,13 +27,13 @@
 
     {{-- 6-9. Rating --}}
     <td class="border-e border-gray-100 p-2 !text-center w-10 align-middle">
-        <input type="text" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 q-rating" style="text-align: center !important;" placeholder="0" />
+        <input type="number" min="0" max="5" step="0.01" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 q-rating" style="text-align: center !important;" placeholder="0" />
     </td>
     <td class="border-e border-gray-100 p-2 !text-center w-10 align-middle">
-        <input type="text" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 e-rating" style="text-align: center !important;" placeholder="0" />
+        <input type="number" min="0" max="5" step="0.01" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 e-rating" style="text-align: center !important;" placeholder="0" />
     </td>
     <td class="border-e border-gray-100 p-2 !text-center w-10 align-middle">
-        <input type="text" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 t-rating" style="text-align: center !important;" placeholder="0" />
+        <input type="number" min="0" max="5" step="0.01" class="w-full !text-center border-0 bg-transparent text-[11px] font-bold p-0 focus:ring-0 t-rating" style="text-align: center !important;" placeholder="0" />
     </td>
     <td class="border-e border-gray-100 p-2 !text-center w-12 align-middle">
         <input type="text" class="w-full !text-center border-0 bg-orange-50/50 rounded-lg text-[11px] font-black p-1 focus:ring-0 text-orange-600 a-rating" style="text-align: center !important;" placeholder="0.0" readonly />

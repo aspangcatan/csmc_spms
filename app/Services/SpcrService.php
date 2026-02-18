@@ -11,6 +11,15 @@ class SpcrService
     public function createSpcrWithEntries(array $data)
     {
         return DB::transaction(function () use ($data) {
+            $alreadyExists = Spcr::where('userid', $data['userid'])
+                ->where('year', $data['year'])
+                ->where('semester', $data['semester'])
+                ->exists();
+
+            if ($alreadyExists) {
+                throw new \Exception('SPCR already exists for this year and semester.');
+            }
+
             $user = User::find($data['userid']);
             $signatories = $this->getAutomatedSignatories($user);
 
@@ -21,7 +30,8 @@ class SpcrService
                 'semester' => $data['semester'],
                 'supervisor_id' => $signatories['supervisor_id'],
                 'division_head_id' => $signatories['division_head_id'],
-                'pmt_id' => $signatories['pmt_id'],
+                'highest_supervisor' => $signatories['highest_supervisor'],
+                'pmt_id' => null,
                 'status' => $data['status'] ?? 'Draft Target',
                 'core_dist' => $data['core_dist'] ?? 50,
                 'support_dist' => $data['support_dist'] ?? 10,
@@ -58,7 +68,13 @@ class SpcrService
     {
         return DB::transaction(function () use ($id, $data) {
             $spcr = Spcr::findOrFail($id);
-            $spcr->update($data['spcr'] ?? []);
+            $spcrData = $data['spcr'] ?? [];
+            foreach (['status', 'year', 'semester', 'core_dist', 'support_dist', 'strategic_dist', 'highest_supervisor'] as $key) {
+                if (array_key_exists($key, $data)) {
+                    $spcrData[$key] = $data[$key];
+                }
+            }
+            $spcr->update($spcrData);
 
             if (isset($data['core_entries'])) $this->syncEntries($spcr, 'core', $data['core_entries']);
             if (isset($data['support_entries'])) $this->syncEntries($spcr, 'support', $data['support_entries']);
@@ -139,7 +155,7 @@ class SpcrService
         return [
             'supervisor_id' => $divisionHead ?? 1,
             'division_head_id' => $divisionHead ?? 1,
-            'pmt_id' => 1, // Usually Admin or Higher Manager
+            'highest_supervisor' => 35,
         ];
     }
 
@@ -168,6 +184,8 @@ class SpcrService
     public function approveSpcr($id, $userId)
     {
         $spcr = Spcr::findOrFail($id);
+        $actingUser = User::find($userId);
+        $isPmtUser = $actingUser ? $actingUser->isPmt() : false;
         
         // Authorization check based on status
         if ($spcr->status === 'Target Submitted' || $spcr->status === 'Accomplishment Submitted') {
@@ -175,7 +193,9 @@ class SpcrService
         } elseif ($spcr->status === 'Supervisor Approved') {
             if ($spcr->division_head_id != $userId) throw new \Exception("Only Division Head can approve this stage.");
         } elseif ($spcr->status === 'Division Head Approved') {
-            if ($spcr->pmt_id != $userId) throw new \Exception("Only PMT can approve this stage.");
+            if ($spcr->highest_supervisor && $spcr->highest_supervisor != $userId && !$isPmtUser) {
+                throw new \Exception("Only PMT can approve this stage.");
+            }
         }
 
         $oldStatus = $spcr->status;
@@ -189,6 +209,7 @@ class SpcrService
             $newStatus = 'Division Head Approved';
         } elseif ($oldStatus === 'Division Head Approved') {
             $newStatus = 'PMT Approved';
+            $spcr->pmt_id = $userId;
         }
 
         $spcr->status = $newStatus;

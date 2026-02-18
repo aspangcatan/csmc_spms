@@ -120,6 +120,8 @@
 
 @push('scripts')
 <script>
+    window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
+    window.spcrBySemesterUrl = window.spcrBySemesterUrl || @json(url('/api/spcr/by-semester'));
     let currentSpcrId = null;
     let currentYear = new Date().getFullYear();
     let currentSemester = new Date().getMonth() < 6 ? 1 : 2;
@@ -151,7 +153,7 @@
     function loadSpcrBySemester() {
         const container = $('#spcrLogsContainer');
         
-        fetch(`/api/spcr/by-semester?year=${currentYear}&semester=${currentSemester}`)
+        fetch(`${window.spcrBySemesterUrl}?year=${currentYear}&semester=${currentSemester}`)
             .then(response => response.json())
             .then(data => {
                 if (data && data.id) {
@@ -183,7 +185,7 @@
     }
 
     function loadSpcrLogs(spcrId) {
-        fetch(`/api/spcr/${spcrId}/logs`)
+        fetch(`${window.spcrApiBaseUrl}/${spcrId}/logs`)
             .then(response => response.json())
             .then(logs => {
                 displayLogs(logs);
@@ -252,7 +254,7 @@
             'Are you sure you want to delete this SPCR record? This action cannot be undone.',
             'DELETE',
             () => {
-                fetch(`/api/spcr/${currentSpcrId}`, {
+                fetch(`${window.spcrApiBaseUrl}/${currentSpcrId}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),

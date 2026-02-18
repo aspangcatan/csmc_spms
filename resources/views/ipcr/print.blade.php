@@ -226,13 +226,13 @@
 
         .pmt-stamp {
             position: absolute;
-            bottom: 40px;
-            right: 10px;
+            bottom: 0px;
+            right: 5px;
             z-index: 1000;
         }
 
         .pmt-stamp img {
-            width: 200px;
+            width: 180px;
             height: auto;
         }
     </style>
@@ -285,7 +285,8 @@
             $groupedCore = $groupByOutput($ipcr->coreFunctions);
             $groupedSupport = $groupByOutput($ipcr->supportFunctions);
             $groupedStrategic = $groupByOutput($ipcr->strategicFunctions);
-
+            
+            $isAccomplishmentPhase = !in_array($ipcr->status, ['Draft Target', 'Target Submitted', 'Target Approved']);
         @endphp
 
         <div class="content-wrapper">
@@ -325,7 +326,7 @@
                         I, <span class="underline bold">{{ $ipcr->user->name ?? 'N/A' }}</span>, 
                         <span class="underline bold">{{ $ipcr->user->designation_name ?? '' }}</span> of the 
                         <span class="underline bold">{{ $ipcr->user->section_name ?? '' }}</span> of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period 
-                        <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('M d, Y') }} to {{ \Carbon\Carbon::parse($ipcr->period_to)->format('M d, Y') }}</span>.
+                        <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('F j') }} to {{ \Carbon\Carbon::parse($ipcr->period_to)->format('F j, Y') }}</span>.
                     </td>
                 </tr>
             </table>
@@ -336,8 +337,8 @@
                     <td colspan="5" class="employee-info no-border-top">
                         Name of Employee: <span style="margin-left: 50px;"><strong>{{ $ipcr->user->name ?? 'N/A' }}</strong></span>
                     </td>
-                    <td colspan="3" class="center no-border-top">
-                        Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->ipcr_date ? \Carbon\Carbon::parse($ipcr->ipcr_date)->format('m/d/Y') : 'Date Created' }}</strong></span>
+                    <td colspan="3" class="no-border-top">
+                        Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
                     </td>
                 </tr>
                 <tr>
@@ -498,23 +499,55 @@
                 <tr class="center">
                     <td class="text-left bold">Core Functions</td>
                     <td>50%</td>
-                    <td>{{ number_format($coreAvg, 2) }}</td>
-                    <td colspan="2">{{ number_format($weightedCore, 2) }}</td>
-                    <td rowspan="3" style="vertical-align: middle;" class="bold">{{ number_format($finalScore, 2) }}</td>
-                    <td rowspan="3" style="vertical-align: middle;" class="bold">{{ $ipcr->final_rating_adjective ?? '' }}</td>
+                    <td>
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($coreAvg, 2) }}
+                         @endif
+                    </td>
+                    <td colspan="2">
+                        @if($isAccomplishmentPhase)
+                             {{ number_format($weightedCore, 2) }}
+                        @endif
+                    </td>
+                    <td rowspan="3" style="vertical-align: middle;" class="bold">
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($finalScore, 2) }}
+                        @endif
+                    </td>
+                    <td rowspan="3" style="vertical-align: middle;" class="bold">
+                        @if($isAccomplishmentPhase)
+                         {{ $ipcr->final_rating_adjective ?? '' }}
+                        @endif
+                    </td>
                     <td rowspan="3"></td>
                 </tr>
                 <tr class="center">
                     <td class="text-left bold">Support Functions</td>
                     <td>10%</td>
-                    <td>{{ number_format($supportAvg, 2) }}</td>
-                    <td colspan="2">{{ number_format($weightedSupport, 2) }}</td>
+                    <td>
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($supportAvg, 2) }}
+                        @endif
+                    </td>
+                    <td colspan="2">
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($weightedSupport, 2) }}
+                        @endif
+                    </td>
                 </tr>
                 <tr class="center">
                     <td class="text-left bold">Strategic Functions</td>
                     <td>40%</td>
-                    <td>{{ number_format($strategicAvg, 2) }}</td>
-                    <td colspan="2">{{ number_format($weightedStrategic, 2) }}</td>
+                    <td>
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($strategicAvg, 2) }}
+                        @endif
+                    </td>
+                    <td colspan="2">
+                        @if($isAccomplishmentPhase)
+                         {{ number_format($weightedStrategic, 2) }}
+                        @endif
+                    </td>
                 </tr>
 
                 <!-- Comments Section -->
@@ -542,7 +575,7 @@
                     </td>
                     <td rowspan="2"></td>
                     <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>AGUSTIN D. AGOS, JR., MD, FPSGS, FPCS, DODT, PhD OD, RODC</u></strong><br>
+                        <strong><u>{{ $ipcr->divisionHead->name ?? '' }}</u></strong><br>
                         <span class="small-text">Next Higher Supervisor</span>
                     </td>
                     <td rowspan="2"></td>
@@ -564,7 +597,7 @@
 
             <!-- PMT Stamp -->
             <div class="pmt-stamp">
-                <img src="{{ asset('img/img_pmt.jpg') }}" alt="PMT Stamp">
+                <img src="{{ asset('img/img_pmt.png') }}" alt="PMT Stamp">
             </div>
         </div>
     </div>

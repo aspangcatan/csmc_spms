@@ -153,6 +153,7 @@
 
 @push('scripts')
 <script>
+    window.IPCR_CONTEXT = 'staff';
     $(document).ready(function() {
         // Search functionality
         $('#staffSearch').on('keyup', function() {
@@ -172,6 +173,7 @@
 
     function viewStaffIpcr(id) {
         if (typeof loadIPCR === 'function') {
+            window.ipcrModalMode = 'view';
             loadIPCR(id);
             $('#ipcrModal').modal('show');
         } else {

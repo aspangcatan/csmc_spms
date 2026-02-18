@@ -30,7 +30,8 @@ class LoginController extends Controller
         if ($user && ($credentials['password'] === $user->password || Hash::check($credentials['password'], $user->password))) {
             Auth::login($user);
             $request->session()->regenerate();
-            return redirect()->intended('/ipcr');
+
+            return redirect()->intended('/dashboard-new');
         }
 
         return back()->withErrors([

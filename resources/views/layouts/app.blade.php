@@ -93,17 +93,33 @@
         .btn-orange {
             background-color: #f06a38;
             color: white;
+            border: 1px solid #f06a38;
             border-radius: 8px;
             font-weight: 600;
             font-size: 0.75rem;
             padding: 0.5rem 1rem;
-            transition: opacity 0.2s;
-            border: none;
+            transition: all 0.2s ease;
         }
 
-        .btn-orange:hover {
-            opacity: 0.9;
-            color: white;
+        .btn-orange:hover,
+        .btn-orange:focus,
+        .btn-orange:focus-visible,
+        .btn-orange:active {
+            background-color: #d95a2b !important;
+            border-color: #d95a2b !important;
+            color: #fff !important;
+            box-shadow: 0 8px 18px rgba(240, 106, 56, 0.24);
+            transform: translateY(-1px);
+        }
+
+        .btn-orange:disabled,
+        .btn-orange.disabled {
+            background-color: #f7b49a !important;
+            border-color: #f7b49a !important;
+            color: #fff !important;
+            opacity: 1;
+            box-shadow: none;
+            transform: none;
         }
 
         .btn-outline-modern {
@@ -257,18 +273,20 @@
     <div class="sidebar-content">
         <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 ml-4">Main Menu</p>
         
-        <a href="/dashboard-new" class="sidebar-item {{ Request::is('dashboard-new*') ? 'active' : '' }}">
+        <a href="{{ route('dashboard.new') }}" class="sidebar-item {{ Request::is('dashboard-new*') ? 'active' : '' }}">
             <i class="fas fa-chart-pie"></i>
             <span>Dashboard</span>
         </a>
 
-        <a href="/ipcr" class="sidebar-item {{ Request::is('ipcr') ? 'active' : '' }}">
+        @if(!auth()->user()->isSectionHead() && !auth()->user()->isDivisionHead())
+        <a href="{{ url('/ipcr') }}" class="sidebar-item {{ Request::is('ipcr') ? 'active' : '' }}">
             <i class="far fa-file-alt"></i>
             <span>IPCR</span>
         </a>
+        @endif
 
         @if(auth()->user()->isSectionHead())
-        <a href="/spcr" class="sidebar-item {{ Request::is('spcr*') ? 'active' : '' }}">
+        <a href="{{ route('spcr.index') }}" class="sidebar-item {{ Request::is('spcr*') ? 'active' : '' }}">
             <i class="fas fa-sitemap"></i>
             <span>SPCR</span>
         </a>
@@ -285,6 +303,17 @@
         <a href="{{ route('spcr.staff') }}" class="sidebar-item {{ Request::routeIs('spcr.staff') ? 'active' : '' }}">
             <i class="fas fa-shield-alt"></i>
             <span>Staff SPCR</span>
+        </a>
+        <a href="{{ route('division_head.approvals') }}" class="sidebar-item {{ Request::routeIs('division_head.approvals') ? 'active' : '' }}">
+            <i class="fas fa-check-double"></i>
+            <span>Division Approvals</span>
+        </a>
+        @endif
+
+        @if(auth()->user()->isPmt())
+        <a href="{{ route('pmt.approvals') }}" class="sidebar-item {{ Request::routeIs('pmt.approvals') ? 'active' : '' }}">
+            <i class="fas fa-stamp"></i>
+            <span>PMT Approvals</span>
         </a>
         @endif
 
@@ -428,7 +457,7 @@
             btn.prop('disabled', true).text('Updating...');
             
             $.ajax({
-                url: '/password/update',
+                url: @json(route('password.update')),
                 method: 'POST',
                 data: $(this).serialize(),
                 success: function(response) {

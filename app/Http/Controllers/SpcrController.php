@@ -40,6 +40,7 @@ class SpcrController extends Controller
         $validated = $request->validate([
             'year' => 'required|integer',
             'semester' => 'required|integer|in:1,2',
+            'status' => 'nullable|string|in:Draft Target,Target Submitted,Target Approved,Draft Accomplishment,Accomplishment Submitted,Supervisor Approved,Division Head Approved,PMT Approved',
             'core_entries' => 'array',
             'support_entries' => 'array',
             'strategic_entries' => 'array',
@@ -52,9 +53,12 @@ class SpcrController extends Controller
         ]);
 
         $validated['userid'] = auth()->id();
-        $spcr = $this->spcrService->createSpcrWithEntries($validated);
-
-        return response()->json($spcr, 201);
+        try {
+            $spcr = $this->spcrService->createSpcrWithEntries($validated);
+            return response()->json($spcr, 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function show($id)

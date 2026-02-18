@@ -166,7 +166,11 @@
 
 @push('scripts')
 <script>
+    window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
     // currentSpcrId is handled by the index page to avoid duplicate declaration
+    function isStaffReviewMode() {
+        return window.SPCR_CONTEXT === 'staff' || window.location.pathname.includes(@json(route('spcr.staff', [], false)));
+    }
 
     function createSpcr() {
         currentSpcrId = null;
@@ -208,7 +212,31 @@
         saveSpcr(true); // Always submit based on user request "no more saving of draft"
     }
 
+    function isValidRatingValue(rawValue) {
+        if (rawValue === '' || rawValue === null || typeof rawValue === 'undefined') return true;
+        const value = Number(rawValue);
+        return !Number.isNaN(value) && value >= 0 && value <= 5;
+    }
+
+    function validateAllRatings(showError = true) {
+        let isValid = true;
+        $('.q-rating, .e-rating, .t-rating').each(function() {
+            const input = $(this);
+            const rawValue = input.val();
+            const ok = isValidRatingValue(rawValue);
+            input.toggleClass('text-red-500', !ok);
+            if (!ok) isValid = false;
+        });
+
+        if (!isValid && showError) {
+            showAlert('Invalid Rating', 'Ratings must be between 0 and 5 only.', 'error');
+        }
+        return isValid;
+    }
+
     function saveSpcr(isSubmit = true) {
+        if (!validateAllRatings(true)) return;
+
         let currentStatus = $('#statusValue').val();
         let targetStatus = currentStatus;
 
@@ -230,7 +258,7 @@
         };
 
         const method = currentSpcrId ? 'PUT' : 'POST';
-        const url = currentSpcrId ? `/api/spcr/${currentSpcrId}` : '/api/spcr';
+        const url = currentSpcrId ? `${window.spcrApiBaseUrl}/${currentSpcrId}` : window.spcrApiBaseUrl;
 
         if (isSubmit) {
             const phase = targetStatus.includes('Target') ? 'Target' : 'Accomplishment';
@@ -286,7 +314,7 @@
 
     function viewSpcr(id) {
         currentSpcrId = id;
-        fetch(`/api/spcr/${id}`)
+        fetch(`${window.spcrApiBaseUrl}/${id}`)
             .then(res => res.json())
             .then(spcr => {
                 $('#spcrId').val(spcr.id);
@@ -303,9 +331,10 @@
                 toggleSemesterFields(spcr.status);
 
                 const userId = {{ Auth::id() }};
+                const userIsPmt = {{ auth()->user()->isPmt() ? 'true' : 'false' }};
                 const isSupervisor = spcr.supervisor_id == userId;
                 const isDivHead = spcr.division_head_id == userId;
-                const isPmt = spcr.pmt_id == userId;
+                const isPmt = (spcr.pmt_id == userId) || userIsPmt;
                 
                 let canApprove = false;
                 if (spcr.status === 'Target Submitted' || spcr.status === 'Accomplishment Submitted') {
@@ -316,14 +345,23 @@
                     canApprove = isPmt;
                 }
 
-                if (canApprove) {
+                if (isStaffReviewMode()) {
                     $('#handleSaveBtn').hide();
-                    $('#approveBtn').show();
-                } else if (['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(spcr.status)) {
-                    $('#handleSaveBtn').show();
-                    $('#approveBtn').hide();
+                    if (canApprove) {
+                        $('#approveBtn').show();
+                    } else {
+                        $('#approveBtn').hide();
+                    }
                 } else {
-                    $('#handleSaveBtn, #approveBtn').hide();
+                    if (canApprove) {
+                        $('#handleSaveBtn').hide();
+                        $('#approveBtn').show();
+                    } else if (['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(spcr.status)) {
+                        $('#handleSaveBtn').show();
+                        $('#approveBtn').hide();
+                    } else {
+                        $('#handleSaveBtn, #approveBtn').hide();
+                    }
                 }
 
                 $('#spcrModal').modal('show');
@@ -369,6 +407,9 @@
             $('.delete-row-btn, .add-row-btn').show();
         } else if (isAccompDraft) {
             evaluationInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            if (!isStaffReviewMode()) {
+                ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            }
         } else if (isReadOnly) {
             // Check if user is approver for the current stage to allow rating
             const currentStatus = $('#statusValue').val();
@@ -389,6 +430,8 @@
     }
 
     function approveSpcr() {
+        if (!validateAllRatings(true)) return;
+
         const currentStatus = $('#statusValue').val();
         let confirmMsg = 'Approve Document?';
         if (currentStatus === 'Target Submitted') confirmMsg = 'Approve Targets?';
@@ -403,7 +446,7 @@
                 strategic_entries: getEntriesFromTable('#strategic-entries'),
             };
 
-            fetch(`/api/spcr/${currentSpcrId}`, {
+            fetch(`${window.spcrApiBaseUrl}/${currentSpcrId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -412,24 +455,38 @@
                 },
                 body: JSON.stringify(payload)
             })
-            .then(() => {
-                fetch(`/api/spcr/${currentSpcrId}/approve`, {
+            .then(async (res) => {
+                if (!res.ok) {
+                    let msg = 'Failed to update SPCR before approval.';
+                    try {
+                        const err = await res.json();
+                        if (err.message) msg = err.message;
+                    } catch (e) {}
+                    throw new Error(msg);
+                }
+                return fetch(`${window.spcrApiBaseUrl}/${currentSpcrId}/approve`, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
                         'Accept': 'application/json'
                     }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.message && data.error) {
-                         showAlert('Error', data.message, 'error');
-                    } else {
-                        toast('SPCR Approved Successfully');
-                    }
-                    $('#spcrModal').modal('hide');
-                    if (typeof loadSpcrBySemester === 'function') loadSpcrBySemester();
                 });
+            })
+            .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || 'Approval failed.');
+                }
+                toast(data.message || 'SPCR Approved Successfully');
+                $('#spcrModal').modal('hide');
+                if (typeof loadSpcrBySemester === 'function') {
+                    loadSpcrBySemester();
+                } else if (isStaffReviewMode()) {
+                    window.location.reload();
+                }
+            })
+            .catch((err) => {
+                showAlert('Error', err.message || 'Failed to approve SPCR.', 'error');
             });
         });
     }
@@ -469,14 +526,31 @@
     // Auto-compute Average Rating
     $(document).on('input', '.q-rating, .e-rating, .t-rating', function() {
         const row = $(this).closest('tr');
-        const q = parseFloat(row.find('.q-rating').val()) || 0;
-        const e = parseFloat(row.find('.e-rating').val()) || 0;
-        const t = parseFloat(row.find('.t-rating').val()) || 0;
+        const current = $(this);
+        if (!isValidRatingValue(current.val())) {
+            current.addClass('text-red-500');
+            row.find('.a-rating').val('0.00');
+            return;
+        }
+        current.removeClass('text-red-500');
+
+        const qRaw = row.find('.q-rating').val();
+        const eRaw = row.find('.e-rating').val();
+        const tRaw = row.find('.t-rating').val();
+        const q = isValidRatingValue(qRaw) ? (parseFloat(qRaw) || 0) : 0;
+        const e = isValidRatingValue(eRaw) ? (parseFloat(eRaw) || 0) : 0;
+        const t = isValidRatingValue(tRaw) ? (parseFloat(tRaw) || 0) : 0;
 
         const ratings = [q, e, t].filter(v => v > 0);
         const average = ratings.length > 0 ? (ratings.reduce((a, b) => a + b) / ratings.length) : 0;
         
         row.find('.a-rating').val(average > 0 ? average.toFixed(2) : '0.00');
+    });
+
+    $(document).on('change', '.q-rating, .e-rating, .t-rating', function() {
+        if (!isValidRatingValue($(this).val())) {
+            showAlert('Invalid Rating', 'Ratings must be between 0 and 5 only.', 'error');
+        }
     });
 </script>
 @endpush

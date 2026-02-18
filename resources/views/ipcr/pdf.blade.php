@@ -300,7 +300,7 @@
         </td>
         <td></td>
         <td colspan="4" style="padding-top: 30px">
-            <u>AGUSTIN D. AGOS, JR., MD, FPSGS, FPCS, DODT, PhD OD, RODC</u><br>
+            <u>{{ $ipcr->divisionHead->name ?? '' }}</u><br>
             Next Higher Supervisor
         </td>
         <td></td>

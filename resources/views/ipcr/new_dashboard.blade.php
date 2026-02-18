@@ -233,7 +233,7 @@
                                 Your latest IPCR ({{ $globalIpcr->year }} S{{ $globalIpcr->semester }}) is current.
                             </p>
                             <button class="py-3 px-6 bg-white text-black rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-lg"
-                                    onclick="window.location.href='/ipcr'">
+                                    onclick="window.location.href='{{ url('/ipcr') }}'">
                                 View Current
                             </button>
                         @else
@@ -242,7 +242,7 @@
                                 You haven't created any IPCR records yet. start your performance journey.
                             </p>
                             <button class="py-3 px-6 bg-orange-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
-                                    onclick="window.location.href='/ipcr'">
+                                    onclick="window.location.href='{{ url('/ipcr') }}'">
                                 Create First IPCR
                             </button>
                         @endif
