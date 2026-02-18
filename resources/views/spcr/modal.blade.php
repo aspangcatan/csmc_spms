@@ -44,6 +44,11 @@
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4">
                             <div>
+                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">SPCR Date</label>
+                                <input type="date" id="spcrDate" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                            </div>
+                            <div class="h-8 w-px bg-gray-200"></div>
+                            <div>
                                 <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Division Head</label>
                                 <p class="text-xs font-bold text-gray-900" id="raterName">{{ Auth::user()->name }}</p>
                             </div>
@@ -175,6 +180,7 @@
     function createSpcr() {
         currentSpcrId = null;
         $('#spcrId').val('');
+        $('#spcrDate').val(new Date().toISOString().split('T')[0]);
         $('#displaySpcrId').text('NEW_DOCUMENT');
         $('#modalTitle').text(`CREATE SPCR ${currentYear} - ${currentSemester == 1 ? '1st' : '2nd'} Sem`);
         
@@ -251,6 +257,7 @@
         const payload = {
             year: currentYear,
             semester: currentSemester,
+            spcr_date: $('#spcrDate').val(),
             status: targetStatus,
             core_entries: getEntriesFromTable('#core-entries'),
             support_entries: getEntriesFromTable('#support-entries'),
@@ -318,6 +325,7 @@
             .then(res => res.json())
             .then(spcr => {
                 $('#spcrId').val(spcr.id);
+                $('#spcrDate').val(spcr.spcr_date || '');
                 $('#displaySpcrId').text(`SPCR-${String(spcr.id).padStart(5, '0')}`);
                 $('#modalTitle').text(`SPCR ${spcr.year} - ${spcr.semester == 1 ? '1st' : '2nd'} Semester`);
                 $('#raterName').text(spcr.division_head?.name || '---');
@@ -397,6 +405,7 @@
         const settingInputs = $('.output-field, .indicator-field, .accountability-field');
         const evaluationInputs = $('.accomplishment-field, .acc-rate-field, .remarks-field');
         const ratingInputs = $('.q-rating, .e-rating, .t-rating');
+        const spcrDateInput = $('#spcrDate');
 
         // Reset all
         $('#spcrModal textarea, #spcrModal input').prop('disabled', true).addClass('bg-gray-50/50 cursor-not-allowed');
@@ -404,9 +413,11 @@
 
         if (isTargetDraft) {
             settingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             $('.delete-row-btn, .add-row-btn').show();
         } else if (isAccompDraft) {
             evaluationInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             if (!isStaffReviewMode()) {
                 ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             }
@@ -441,6 +452,7 @@
         
         confirmAction(confirmMsg, 'Are you sure you want to approve this SPCR stage?', 'APPROVE', () => {
             const payload = {
+                spcr_date: $('#spcrDate').val(),
                 core_entries: getEntriesFromTable('#core-entries'),
                 support_entries: getEntriesFromTable('#support-entries'),
                 strategic_entries: getEntriesFromTable('#strategic-entries'),

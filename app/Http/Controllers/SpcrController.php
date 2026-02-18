@@ -40,6 +40,10 @@ class SpcrController extends Controller
         $validated = $request->validate([
             'year' => 'required|integer',
             'semester' => 'required|integer|in:1,2',
+            'period_from' => 'nullable|date',
+            'period_to' => 'nullable|date',
+            'spcr_date' => 'nullable|date',
+            'date_done' => 'nullable|date',
             'status' => 'nullable|string|in:Draft Target,Target Submitted,Target Approved,Draft Accomplishment,Accomplishment Submitted,Supervisor Approved,Division Head Approved,PMT Approved',
             'core_entries' => 'array',
             'support_entries' => 'array',

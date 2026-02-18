@@ -28,6 +28,10 @@ class SpcrService
                 'division_id' => $user->division,
                 'year' => $data['year'],
                 'semester' => $data['semester'],
+                'period_from' => $data['period_from'] ?? ($data['semester'] == 1 ? "{$data['year']}-01-01" : "{$data['year']}-07-01"),
+                'period_to' => $data['period_to'] ?? ($data['semester'] == 1 ? "{$data['year']}-06-30" : "{$data['year']}-12-31"),
+                'spcr_date' => $data['spcr_date'] ?? null,
+                'date_done' => $data['date_done'] ?? null,
                 'supervisor_id' => $signatories['supervisor_id'],
                 'division_head_id' => $signatories['division_head_id'],
                 'highest_supervisor' => $signatories['highest_supervisor'],
@@ -69,7 +73,7 @@ class SpcrService
         return DB::transaction(function () use ($id, $data) {
             $spcr = Spcr::findOrFail($id);
             $spcrData = $data['spcr'] ?? [];
-            foreach (['status', 'year', 'semester', 'core_dist', 'support_dist', 'strategic_dist', 'highest_supervisor'] as $key) {
+            foreach (['status', 'year', 'semester', 'period_from', 'period_to', 'spcr_date', 'date_done', 'core_dist', 'support_dist', 'strategic_dist', 'highest_supervisor'] as $key) {
                 if (array_key_exists($key, $data)) {
                     $spcrData[$key] = $data[$key];
                 }
