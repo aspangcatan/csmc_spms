@@ -148,7 +148,10 @@ class SpcrService
 
     public function getAutomatedSignatories($user)
     {
+        $supervisorId = null;
         $divisionHead = null;
+        $highestSupervisor = 35;
+
         if ($user && $user->division) {
             $divisionHead = DB::connection('user')
                 ->table('division')
@@ -156,10 +159,30 @@ class SpcrService
                 ->value('head');
         }
 
+        if ($user && $user->section) {
+            $section = DB::connection('user')
+                ->table('section')
+                ->select('head', 'subsection')
+                ->where('id', $user->section)
+                ->first();
+
+            // Unit-head flow: section has a parent subsection, so immediate supervisor
+            // should be the head of that parent section.
+            if ($section && !empty($section->subsection)) {
+                $supervisorId = DB::connection('user')
+                    ->table('section')
+                    ->where('id', $section->subsection)
+                    ->value('head');
+
+                // For unit-head flow, next highest approver is division head.
+                $highestSupervisor = $divisionHead ?? 35;
+            }
+        }
+
         return [
-            'supervisor_id' => $divisionHead ?? 1,
+            'supervisor_id' => $supervisorId ?? $divisionHead ?? 1,
             'division_head_id' => $divisionHead ?? 1,
-            'highest_supervisor' => 35,
+            'highest_supervisor' => $highestSupervisor,
         ];
     }
 
@@ -256,19 +279,47 @@ class SpcrService
     {
         $year = $year ?? date('Y');
         $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return [];
+        }
+
         $divisionId = $user->division;
-        
-        // Find all users in the same division who are SECTION HEADS
-        $sectionHeadIds = DB::connection('user')->table('section')
-            ->where('division', $divisionId)
-            ->whereNotNull('head')
-            ->pluck('head')
+        $isDivisionHead = $user->isDivisionHead();
+        $staffIds = [];
+
+        if ($isDivisionHead && $divisionId) {
+            $divisionSectionHeadIds = DB::connection('user')->table('section')
+                ->where('division', $divisionId)
+                ->whereNotNull('head')
+                ->pluck('head')
+                ->toArray();
+
+            $staffIds = array_merge($staffIds, $divisionSectionHeadIds);
+        }
+
+        // If user heads a parent section that has child subsections,
+        // include those child section heads as managed staff.
+        $managedSectionIds = DB::connection('user')->table('section')
+            ->where('head', $userId)
+            ->pluck('id')
             ->toArray();
 
-        $staff = \App\Models\User::whereIn('id', $sectionHeadIds)
-            ->where('division', $divisionId)
-            ->where('id', '!=', $userId) // Don't include the Division Head themselves
-            ->get();
+        if (!empty($managedSectionIds)) {
+            $subSectionHeadIds = DB::connection('user')->table('section')
+                ->whereIn('subsection', $managedSectionIds)
+                ->whereNotNull('head')
+                ->pluck('head')
+                ->toArray();
+
+            $staffIds = array_merge($staffIds, $subSectionHeadIds);
+        }
+
+        $staffIds = array_values(array_unique(array_filter($staffIds, fn($id) => (int) $id !== (int) $userId)));
+        if (empty($staffIds)) {
+            return [];
+        }
+
+        $staff = \App\Models\User::whereIn('id', $staffIds)->get();
 
         $results = [];
         foreach($staff as $member) {

@@ -31,7 +31,7 @@ class LoginController extends Controller
             Auth::login($user);
             $request->session()->regenerate();
 
-            return redirect()->intended('/dashboard-new');
+            return redirect('/dashboard-new');
         }
 
         return back()->withErrors([

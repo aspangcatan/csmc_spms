@@ -354,14 +354,34 @@ class IpcrService
     {
         $sectionHead = null;
         $divisionHead = null;
+        $highestSupervisor = 35;
 
         if ($user) {
             try {
                 if ($user->section) {
-                    $sectionHead = DB::connection('user')
+                    $section = DB::connection('user')
                         ->table('section')
+                        ->select('head', 'subsection')
                         ->where('id', $user->section)
-                        ->value('head');
+                        ->first();
+
+                    if ($section) {
+                        // Default: immediate supervisor is the user's own section head.
+                        $sectionHead = $section->head;
+
+                        // If current section is a subsection, highest supervisor should be
+                        // the head of its parent/main section.
+                        if (!empty($section->subsection)) {
+                            $parentSectionHead = DB::connection('user')
+                                ->table('section')
+                                ->where('id', $section->subsection)
+                                ->value('head');
+
+                            if (!empty($parentSectionHead)) {
+                                $highestSupervisor = $parentSectionHead;
+                            }
+                        }
+                    }
                 }
                 if ($user->division) {
                     $divisionHead = DB::connection('user')
@@ -377,7 +397,7 @@ class IpcrService
         return [
             'supervisor_id' => $sectionHead ?? 1, // Fallback to 1 for dev
             'division_head' => $divisionHead,
-            'highest_supervisor' => 35, // DR. AGOS ID
+            'highest_supervisor' => $highestSupervisor,
         ];
     }
 

@@ -323,7 +323,7 @@
             <table>
                 <tr>
                     <td colspan="8" class="commitment-text no-border-top">
-                        I, <span class="underline bold">{{ $ipcr->user->name ?? 'N/A' }}</span>, 
+                        I, <span class="underline bold">{{ strtoupper($ipcr->user->name ?? 'N/A') }}</span>, 
                         <span class="underline bold">{{ $ipcr->user->designation_name ?? '' }}</span> of the 
                         <span class="underline bold">{{ $ipcr->user->section_name ?? '' }}</span> of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period 
                         <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('F j') }} to {{ \Carbon\Carbon::parse($ipcr->period_to)->format('F j, Y') }}</span>.
@@ -335,7 +335,7 @@
             <table>
                 <tr>
                     <td colspan="5" class="employee-info no-border-top">
-                        Name of Employee: <span style="margin-left: 50px;"><strong>{{ $ipcr->user->name ?? 'N/A' }}</strong></span>
+                        Name of Employee: <span style="margin-left: 50px;"><strong>{{ strtoupper($ipcr->user->name ?? 'N/A') }}</strong></span>
                     </td>
                     <td colspan="3" class="no-border-top">
                         Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
@@ -351,7 +351,7 @@
                 </tr>
                 <tr>
                     <td colspan="5" class="center no-border-top">
-                        <strong>{{ $ipcr->supervisor->name ?? 'N/A' }}</strong>
+                        <strong>{{ strtoupper($ipcr->supervisor->name ?? 'N/A') }}</strong>
                     </td>
                     <td colspan="3" rowspan="2"></td>
                 </tr>
@@ -570,19 +570,19 @@
                         I certify that I discussed my assessment of the performance with the employee
                     </td>
                     <td rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>{{ $ipcr->supervisor->name ?? '' }}</u></strong><br>
+                        <strong><u>{{ strtoupper($ipcr->supervisor->name ?? '') }}</u></strong><br>
                         <span class="small-text">Supervisor</span>
                     </td>
                     <td rowspan="2"></td>
                     <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>{{ $ipcr->divisionHead->name ?? '' }}</u></strong><br>
+                        <strong><u>{{ strtoupper($ipcr->divisionHead->name ?? '') }}</u></strong><br>
                         <span class="small-text">Next Higher Supervisor</span>
                     </td>
                     <td rowspan="2"></td>
                 </tr>
                 <tr class="center">
                     <td style="padding-top: 0;">
-                        <strong><u>{{ $ipcr->user->name ?? '' }}</u></strong><br>
+                        <strong><u>{{ strtoupper($ipcr->user->name ?? '') }}</u></strong><br>
                         <span class="small-text">Employee</span>
                     </td>
                 </tr>

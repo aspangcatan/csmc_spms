@@ -149,6 +149,9 @@
                         </button>
                         
                         <div class="flex gap-3">
+                            <button id="printBtn" class="btn btn-outline-modern bg-white border-gray-200 px-6 py-3" onclick="printSpcr()">
+                                <i class="fas fa-print mr-2 opacity-50"></i> Print Preview
+                            </button>
                             <button id="approveBtn" class="btn btn-orange bg-emerald-500 hover:bg-emerald-600 px-8 py-3 shadow-lg shadow-emerald-500/20" style="display: none;" onclick="approveSpcr()">
                                 Approve Document
                             </button>
@@ -172,6 +175,7 @@
 @push('scripts')
 <script>
     window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
+    window.spcrPrintBaseUrl = window.spcrPrintBaseUrl || @json(url('/spcr'));
     // currentSpcrId is handled by the index page to avoid duplicate declaration
     function isStaffReviewMode() {
         return window.SPCR_CONTEXT === 'staff' || window.location.pathname.includes(@json(route('spcr.staff', [], false)));
@@ -501,6 +505,15 @@
                 showAlert('Error', err.message || 'Failed to approve SPCR.', 'error');
             });
         });
+    }
+
+    function printSpcr() {
+        const spcrId = $('#spcrId').val() || currentSpcrId;
+        if (!spcrId) {
+            showAlert('Action Required', 'Please save the SPCR first before printing.', 'info');
+            return;
+        }
+        window.open(`${window.spcrPrintBaseUrl}/${spcrId}/print`, '_blank');
     }
 
     function updateStatusIndicator(currentStatus) {

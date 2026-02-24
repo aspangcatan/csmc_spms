@@ -6,6 +6,7 @@ use App\Services\SpcrService;
 use Illuminate\Http\Request;
 use App\Models\Spcr;
 use App\Models\SpcrEntry;
+use Illuminate\Support\Facades\DB;
 
 class SpcrController extends Controller
 {
@@ -121,8 +122,19 @@ class SpcrController extends Controller
 
     public function staff(Request $request)
     {
-        if (!auth()->user()->isDivisionHead()) {
-            abort(403, 'Unauthorized access. Only Division Heads can access this module.');
+        $user = auth()->user();
+
+        $managedSectionIds = DB::connection('user')->table('section')
+            ->where('head', $user->id)
+            ->pluck('id')
+            ->toArray();
+
+        $hasSubSections = !empty($managedSectionIds) && DB::connection('user')->table('section')
+            ->whereIn('subsection', $managedSectionIds)
+            ->exists();
+
+        if (!$user->isDivisionHead() && !$hasSubSections) {
+            abort(403, 'Unauthorized access. Only Division Heads or parent Section Heads can access this module.');
         }
 
         $year = $request->query('year', date('Y'));
@@ -133,7 +145,7 @@ class SpcrController extends Controller
 
     public function print($id)
     {
-        $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'pmt'])->findOrFail($id);
+        $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'highestSupervisor', 'pmt'])->findOrFail($id);
         return view('spcr.print', compact('spcr'));
     }
 }
