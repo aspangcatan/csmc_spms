@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
+    if (auth()->check() && auth()->user()->isSectionHead()) {
+        return redirect('/spcr');
+    }
+
     return redirect('/ipcr');
 });
 
@@ -29,6 +33,10 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/ipcr', function () {
+        if (auth()->user()->isSectionHead()) {
+            abort(403, 'Unauthorized. Section Heads cannot access the IPCR module.');
+        }
+
         return view('ipcr.index');
     });
 
@@ -58,7 +66,8 @@ Route::middleware(['auth'])->group(function () {
     // SPCR Routes
     Route::get('/spcr', [\App\Http\Controllers\SpcrController::class, 'index'])->name('spcr.index');
     Route::get('/spcr/staff', [\App\Http\Controllers\SpcrController::class, 'staff'])->name('spcr.staff');
-    Route::get('/spcr/{id}/print', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print');
+    Route::get('/spcr/print/{id}', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print');
+    Route::get('/spcr/{id}/print', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print.legacy');
     Route::get('/division-head/approvals', [DivisionHeadApprovalController::class, 'index'])->name('division_head.approvals');
     Route::get('/pmt/approvals', [PmtApprovalController::class, 'index'])->name('pmt.approvals');
     Route::prefix('api/spcr')->group(function () {

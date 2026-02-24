@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Services\IpcrService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class IpcrController extends Controller
 {
@@ -15,6 +16,28 @@ class IpcrController extends Controller
     public function __construct(IpcrService $ipcrService)
     {
         $this->ipcrService = $ipcrService;
+
+        $this->middleware(function ($request, $next) {
+            $user = auth()->user();
+            if ($user && $user->isSectionHead()) {
+                $allowedForSectionHead = [
+                    'dashboard',
+                    'staff',
+                    'show',
+                    'printIpcr',
+                    'getLogs',
+                    'getPending',
+                    'approve',
+                ];
+
+                $actionMethod = optional($request->route())->getActionMethod();
+                if (!in_array($actionMethod, $allowedForSectionHead, true)) {
+                    abort(403, 'Unauthorized. Section Heads cannot create or manage personal IPCR documents.');
+                }
+            }
+
+            return $next($request);
+        });
     }
 
     public function index()
@@ -70,6 +93,7 @@ class IpcrController extends Controller
             'strategic_functions.*.timeliness_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.remarks' => 'nullable|string',
         ]);
+        $this->sanitizeAndValidateFunctionGroups($validated);
 
         try {
             $ipcr = $this->ipcrService->createIpcrWithFunctions($validated);
@@ -135,6 +159,7 @@ class IpcrController extends Controller
             'strategic_functions.*.timeliness_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.remarks' => 'nullable|string',
         ]);
+        $this->sanitizeAndValidateFunctionGroups($validated);
 
         $ipcrObj = \App\Models\Ipcr::findOrFail($id);
         if ($ipcrObj->userid != auth()->id()) {
@@ -292,5 +317,76 @@ class IpcrController extends Controller
     public function getSupervisors()
     {
         return response()->json($this->ipcrService->getSupervisors());
+    }
+
+    protected function sanitizeAndValidateFunctionGroups(array &$validated): void
+    {
+        $groups = [
+            'core_functions' => 'Core Functions',
+            'support_functions' => 'Support Functions',
+            'strategic_functions' => 'Strategic Functions',
+        ];
+
+        $errors = [];
+
+        foreach ($groups as $key => $label) {
+            $rows = $validated[$key] ?? [];
+            $rows = array_values(array_filter($rows, function ($row) {
+                return !$this->isEmptyFunctionRow((array) $row);
+            }));
+            $validated[$key] = $rows;
+
+            if (count($rows) < 1) {
+                $errors[$key] = ["At least one {$label} entry is required before saving."];
+                continue;
+            }
+
+            foreach ($rows as $index => $row) {
+                $rowNumber = $index + 1;
+                $output = trim((string) ($row['output'] ?? ''));
+                $successIndicator = trim((string) ($row['success_indicator'] ?? ''));
+
+                if ($output === '') {
+                    $errors["{$key}.{$index}.output"][] = "{$label} row {$rowNumber}: Output is required.";
+                }
+
+                if ($successIndicator === '') {
+                    $errors["{$key}.{$index}.success_indicator"][] = "{$label} row {$rowNumber}: Success Indicator is required.";
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    protected function isEmptyFunctionRow(array $row): bool
+    {
+        $fields = [
+            'output',
+            'success_indicator',
+            'actual_accomplishment',
+            'quantity_rating',
+            'efficiency_rating',
+            'timeliness_rating',
+            'remarks',
+        ];
+
+        foreach ($fields as $field) {
+            $value = $row[$field] ?? null;
+            if (is_string($value)) {
+                if (trim($value) !== '') {
+                    return false;
+                }
+                continue;
+            }
+
+            if (!is_null($value) && $value !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

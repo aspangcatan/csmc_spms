@@ -236,6 +236,15 @@
         }
 
         function createIpcr(){
+            if (currentIpcrId) {
+                showAlert(
+                    'Existing Document Found',
+                    `An IPCR document already exists for ${currentYear}, ${currentSemester === 1 ? '1st Semester' : '2nd Semester'}. Please open the existing document instead of creating a new one.`,
+                    'info'
+                );
+                return;
+            }
+
             window.ipcrModalMode = 'create';
             window.currentCreatingSemester = currentSemester;
             window.currentCreatingYear = currentYear;

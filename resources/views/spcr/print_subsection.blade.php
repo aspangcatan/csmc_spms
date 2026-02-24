@@ -143,7 +143,6 @@
             font-size: 9px;
         }
 
-
         .no-border {
             border: none !important;
         }
@@ -274,7 +273,7 @@
                         </div>
                     </td>
                     <td class="doc-info" style="width: 17.5%;">Document Code:</td>
-                    <td class="doc-info" style="width: 17.5%;">HOPSS-HRMS-FM-02</td>
+                    <td class="doc-info" style="width: 17.5%;">HOPSS-HRMS-FM-26</td>
                 </tr>
                 <tr class="header-row">
                     <td class="doc-info">Revision No.:</td>
@@ -282,7 +281,7 @@
                 </tr>
                 <tr class="header-row">
                     <td class="doc-info">Effectivity:</td>
-                    <td class="doc-info">24 April 2023</td>
+                    <td class="doc-info">29 July 2025</td>
                 </tr>
             </table>
 
@@ -311,7 +310,7 @@
                 </tr>
                 <tr>
                     <td colspan="13" class="no-border-bottom"><strong>Approved By:</strong></td>
-                    <td colspan="2"><strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $doneDateDisplay }}</strong></span></td>
+                    <td colspan="2"><strong>Date:</strong> </td>
                 </tr>
                 <tr>
                     <td colspan="13" class="center no-border-top"><strong><u>{{ strtoupper($spcr->supervisor->name ?? 'N/A') }}</u></strong></td>
@@ -319,7 +318,6 @@
                 </tr>
                 <tr>
                     <td colspan="13" class="center"><strong>Name of Supervisor</strong></td>
-                    
                 </tr>
             </table>
 
@@ -475,31 +473,35 @@
                 </tr>
                 {{-- #TODO --}}
                 <tr class="center bold">
-                    <td colspan="5">Discussed With:</td>
+                    <td colspan="3">Discussed With:</td>
+                    <td colspan="3">Assessed by:</td>
                     <td colspan="3">Date</td>
-                    <td colspan="5">Assessed and Final Rating by:</td>
+                    <td colspan="4">Final Rating by:</td>
                     <td colspan="2">Date</td>
                 </tr>
                 <tr class="center">
-                    <td colspan="5" rowspan="2" style="height: 68px; vertical-align: bottom; padding-bottom: 8px;">
+                    <td colspan="3" rowspan="2" style="height: 68px; vertical-align: bottom; padding-bottom: 8px;">
                         <strong><u>{{ strtoupper($spcr->user->name ?? '') }}</u></strong>
                     </td>
-                    <td colspan="3" rowspan="2"></td>
-                    <td colspan="5" class="medium-text center" style="height: 20px;">
+                    <td colspan="3" class="medium-text center" style="height: 20px;">
                         I certify that I discussed my assessment of the performance with the employee
                     </td>
-                    <td colspan="2"></td>
+                    <td colspan="3" rowspan="2"></td>
+                    <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 8px;">
+                        <strong><u>{{ strtoupper($spcr->highestSupervisor->name ?? ($spcr->pmt->name ?? '')) }}</u></strong>
+                    </td>
+                    <td colspan="2" rowspan="2"></td>
                 </tr>
                 <tr>
-                    <td colspan="5" style="vertical-align: bottom; padding-bottom: 8px;" class="center">
+                    <td colspan="3" style="vertical-align: bottom; padding-bottom: 8px;" class="center">
                         <strong><u>{{ strtoupper($spcr->supervisor->name ?? '') }}</u></strong>
                     </td>
-                    <td colspan="2"></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="bold center">Employee</td>
+                    <td colspan="3" class="bold center">Employee</td>
+                    <td colspan="3" class="bold center">Supervisor</td>
                     <td colspan="3"></td>
-                    <td colspan="5" class="bold center">Supervisor</td>
+                    <td colspan="4" class="bold center">Next Higher Supervisor</td>
                     <td colspan="2"></td>
                 </tr>
                 <tr>

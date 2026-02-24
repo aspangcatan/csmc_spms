@@ -11,6 +11,10 @@ class SpcrService
     public function createSpcrWithEntries(array $data)
     {
         return DB::transaction(function () use ($data) {
+            $data['core_entries'] = $this->filterEntryRows($data['core_entries'] ?? []);
+            $data['support_entries'] = $this->filterEntryRows($data['support_entries'] ?? []);
+            $data['strategic_entries'] = $this->filterEntryRows($data['strategic_entries'] ?? []);
+
             $alreadyExists = Spcr::where('userid', $data['userid'])
                 ->where('year', $data['year'])
                 ->where('semester', $data['semester'])
@@ -91,6 +95,7 @@ class SpcrService
 
     protected function syncEntries(Spcr $spcr, $category, array $entries)
     {
+        $entries = $this->filterEntryRows($entries);
         $receivedIds = array_filter(array_column($entries, 'id'));
         $spcr->entries()->where('category', $category)->whereNotIn('id', $receivedIds)->delete();
 
@@ -102,6 +107,49 @@ class SpcrService
                 $spcr->entries()->create(array_merge($entryData, ['category' => $category]));
             }
         }
+    }
+
+    protected function filterEntryRows(array $entries): array
+    {
+        return array_values(array_filter($entries, function ($entry) {
+            return !$this->isEmptyEntryRow((array) $entry);
+        }));
+    }
+
+    protected function isEmptyEntryRow(array $entry): bool
+    {
+        $fields = [
+            'output',
+            'success_indicator',
+            'accountability',
+            'actual_accomplishment',
+            'accomplishment_rate',
+            'quantity_rating',
+            'efficiency_rating',
+            'timeliness_rating',
+            'remarks',
+        ];
+
+        foreach ($fields as $field) {
+            if ($this->hasMeaningfulValue($entry[$field] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function hasMeaningfulValue($value): bool
+    {
+        if (is_null($value)) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        return $value !== '';
     }
 
     protected function calculateRowAvg($data)

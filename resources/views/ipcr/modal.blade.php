@@ -365,6 +365,48 @@
         const semester = parseInt($('#ipcrSemester').val());
         const year = parseInt($('#ipcrYear').val());
         const ipcrId = $('#ipcrId').val();
+        const coreFunctions = collectRows("#core-functions");
+        const supportFunctions = collectRows("#support-functions");
+        const strategicFunctions = collectRows("#strategic-functions");
+        const requiredFieldErrors = validateRequiredIpcrFields({
+            core_functions: coreFunctions,
+            support_functions: supportFunctions,
+            strategic_functions: strategicFunctions
+        });
+
+        if (requiredFieldErrors.length > 0) {
+            const htmlList = `<ul class="text-left list-disc pl-6 space-y-1">${requiredFieldErrors
+                .map(error => `<li>${$('<div>').text(error).html()}</li>`)
+                .join('')}</ul>`;
+
+            Swal.fire({
+                title: 'Incomplete Required Fields',
+                html: htmlList,
+                icon: 'warning',
+                confirmButtonText: 'OK',
+                customClass: {
+                    popup: 'swal2-popup-modern shadow-2xl border border-gray-100',
+                    title: 'swal2-title-modern',
+                    confirmButton: 'swal2-confirm-modern'
+                },
+                buttonsStyling: false
+            });
+            return;
+        }
+
+        const missingSections = [];
+        if (coreFunctions.length < 1) missingSections.push('Core Functions');
+        if (supportFunctions.length < 1) missingSections.push('Support Functions');
+        if (strategicFunctions.length < 1) missingSections.push('Strategic Functions');
+
+        if (missingSections.length > 0) {
+            showAlert(
+                'Incomplete IPCR Entries',
+                `Please provide at least one entry for the following section(s): ${missingSections.join(', ')}. Empty rows are not saved.`,
+                'warning'
+            );
+            return;
+        }
         
         let payload = {
             ipcr: {
@@ -379,9 +421,9 @@
                 support_percentage_distribution: 10,
                 strategic_percentage_distribution: 40
             },
-            core_functions: collectRows("#core-functions"),
-            support_functions: collectRows("#support-functions"),
-            strategic_functions: collectRows("#strategic-functions")
+            core_functions: coreFunctions,
+            support_functions: supportFunctions,
+            strategic_functions: strategicFunctions
         };
 
         console.log("Saving IPCR payload:", payload);
@@ -405,7 +447,7 @@
                         console.error("Validation errors:", data.errors);
                         let errMsg = "";
                         for (let field in data.errors) {
-                            errMsg += `• ${data.errors[field].join(', ')}\n`;
+                            errMsg += `- ${data.errors[field].join(', ')}\n`;
                         }
                         showAlert('Validation Failed', errMsg, 'error');
                     } else {
@@ -466,18 +508,55 @@
             if (tds.length) {
                 rows.push({
                     id: $(this).find(".row-id").val() || null,
-                    output: $(tds[0]).find("textarea").val() || '',
-                    success_indicator: $(tds[1]).find("textarea").val() || '',
-                    actual_accomplishment: $(tds[2]).find("textarea").val() || '',
-                    quantity_rating: $(tds[3]).find("input").val() || '',
-                    efficiency_rating: $(tds[4]).find("input").val() || '',
-                    timeliness_rating: $(tds[5]).find("input").val() || '',
-                    average_rating: $(tds[6]).find("input").val() || '',
-                    remarks: $(tds[7]).find("textarea").val() || ''
+                    output: ($(tds[0]).find("textarea").val() || '').trim(),
+                    success_indicator: ($(tds[1]).find("textarea").val() || '').trim(),
+                    actual_accomplishment: ($(tds[2]).find("textarea").val() || '').trim(),
+                    quantity_rating: ($(tds[3]).find("input").val() || '').toString().trim(),
+                    efficiency_rating: ($(tds[4]).find("input").val() || '').toString().trim(),
+                    timeliness_rating: ($(tds[5]).find("input").val() || '').toString().trim(),
+                    average_rating: ($(tds[6]).find("input").val() || '').toString().trim(),
+                    remarks: ($(tds[7]).find("textarea").val() || '').trim()
                 });
             }
         });
-        return rows;
+        return rows.filter(row => {
+            const fields = [
+                row.output,
+                row.success_indicator,
+                row.actual_accomplishment,
+                row.quantity_rating,
+                row.efficiency_rating,
+                row.timeliness_rating,
+                row.remarks
+            ];
+
+            return fields.some(value => value !== null && value !== undefined && value.toString().trim() !== '');
+        });
+    }
+
+    function validateRequiredIpcrFields(groupedRows) {
+        const labels = {
+            core_functions: 'Core Functions',
+            support_functions: 'Support Functions',
+            strategic_functions: 'Strategic Functions'
+        };
+
+        const errors = [];
+
+        Object.keys(labels).forEach((key) => {
+            const rows = groupedRows[key] || [];
+            rows.forEach((row, index) => {
+                const rowNumber = index + 1;
+                if (!row.output || row.output.trim() === '') {
+                    errors.push(`${labels[key]} row ${rowNumber}: Output is required.`);
+                }
+                if (!row.success_indicator || row.success_indicator.trim() === '') {
+                    errors.push(`${labels[key]} row ${rowNumber}: Success Indicator is required.`);
+                }
+            });
+        });
+
+        return errors;
     }
 
 

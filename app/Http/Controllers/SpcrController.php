@@ -146,6 +146,34 @@ class SpcrController extends Controller
     public function print($id)
     {
         $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'highestSupervisor', 'pmt'])->findOrFail($id);
-        return view('spcr.print', compact('spcr'));
+        $viewName = $this->resolveSpcrPrintView($spcr->userid);
+        return view($viewName, compact('spcr'));
+    }
+
+    protected function resolveSpcrPrintView($creatorId): string
+    {
+        try {
+            $sectionsHeaded = DB::connection('user')
+                ->table('section')
+                ->where('head', $creatorId)
+                ->get(['subsection']);
+
+            if ($sectionsHeaded->isEmpty()) {
+                return 'spcr.print';
+            }
+
+            $isUnitHead = $sectionsHeaded->contains(function ($section) {
+                $subsection = isset($section->subsection) ? trim((string) $section->subsection) : '';
+                return $subsection !== '' && $subsection !== '0';
+            });
+
+            if ($isUnitHead) {
+                return 'spcr.print_subsection';
+            }
+
+            return 'spcr.print';
+        } catch (\Exception $e) {
+            return 'spcr.print';
+        }
     }
 }

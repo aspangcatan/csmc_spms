@@ -10,6 +10,10 @@ class IpcrService
     public function createIpcrWithFunctions(array $data)
     {
         return DB::transaction(function () use ($data) {
+            $data['core_functions'] = $this->filterFunctionRows($data['core_functions'] ?? []);
+            $data['support_functions'] = $this->filterFunctionRows($data['support_functions'] ?? []);
+            $data['strategic_functions'] = $this->filterFunctionRows($data['strategic_functions'] ?? []);
+
             $ipcrData = $data['ipcr'];
 
             $alreadyExists = Ipcr::where('userid', $ipcrData['userid'])
@@ -37,8 +41,10 @@ class IpcrService
             
             $ipcr = Ipcr::create($ipcrData);
 
-            // If 2nd semester, check if there's a 1st semester IPCR to copy from
-            if (!empty($ipcrData['semester']) && $ipcrData['semester'] == 2) {
+            $hasManualRows = !empty($data['core_functions']) || !empty($data['support_functions']) || !empty($data['strategic_functions']);
+
+            // For 2nd semester, copy 1st semester targets only when user did not manually provide rows.
+            if (!empty($ipcrData['semester']) && $ipcrData['semester'] == 2 && !$hasManualRows) {
                 $firstSemesterIpcr = Ipcr::where('userid', $ipcrData['userid'])
                     ->where('year', $ipcrData['year'])
                     ->where('semester', 1)
@@ -69,7 +75,7 @@ class IpcrService
                     }
                 }
             } else {
-                // For 1st semester or if no data provided, create from scratch
+                // For 1st semester or when manual rows are provided, create from payload.
                 if (!empty($data['core_functions'])) {
                     foreach ($data['core_functions'] as $func) {
                         $ipcr->coreFunctions()->create($this->prepareFunctionData($func));
@@ -200,15 +206,15 @@ class IpcrService
             }
 
             if (isset($data['core_functions'])) {
-                $this->syncFunctions($ipcr->coreFunctions(), $data['core_functions']);
+                $this->syncFunctions($ipcr->coreFunctions(), $this->filterFunctionRows($data['core_functions']));
             }
 
             if (isset($data['support_functions'])) {
-                $this->syncFunctions($ipcr->supportFunctions(), $data['support_functions']);
+                $this->syncFunctions($ipcr->supportFunctions(), $this->filterFunctionRows($data['support_functions']));
             }
 
             if (isset($data['strategic_functions'])) {
-                $this->syncFunctions($ipcr->strategicFunctions(), $data['strategic_functions']);
+                $this->syncFunctions($ipcr->strategicFunctions(), $this->filterFunctionRows($data['strategic_functions']));
             }
 
             $this->calculateAllRatings($ipcr);
@@ -218,6 +224,7 @@ class IpcrService
 
     protected function syncFunctions($relation, array $functionsData)
     {
+        $functionsData = $this->filterFunctionRows($functionsData);
         $existingIds = $relation->pluck('id')->toArray();
         $receivedIds = array_filter(array_column($functionsData, 'id'));
 
@@ -235,6 +242,47 @@ class IpcrService
                 $relation->create($preparedData);
             }
         }
+    }
+
+    protected function filterFunctionRows(array $functions): array
+    {
+        return array_values(array_filter($functions, function ($func) {
+            return !$this->isEmptyFunctionRow((array) $func);
+        }));
+    }
+
+    protected function isEmptyFunctionRow(array $func): bool
+    {
+        $fields = [
+            'output',
+            'success_indicator',
+            'actual_accomplishment',
+            'quantity_rating',
+            'efficiency_rating',
+            'timeliness_rating',
+            'remarks',
+        ];
+
+        foreach ($fields as $field) {
+            if ($this->hasMeaningfulValue($func[$field] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function hasMeaningfulValue($value): bool
+    {
+        if (is_null($value)) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        return $value !== '';
     }
 
     public function deleteIpcr($id)

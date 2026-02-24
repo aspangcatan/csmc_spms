@@ -99,9 +99,21 @@
                                             <div class="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
                                             Core Functions
                                         </span>
-                                        <button class="text-gray-300 hover:text-orange-500 transition-colors add-row-btn" type="button" onclick="appendNewRow('#core-entries')">
-                                            <i class="fas fa-plus-circle text-lg"></i>
-                                        </button>
+                                        <div class="dropdown">
+                                            <button class="text-gray-300 hover:text-orange-500 transition-colors add-row-btn" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-plus-circle text-lg"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-2xl rounded-2xl p-2">
+                                                <li><a class="dropdown-item rounded-xl py-2 px-4 text-xs font-bold" href="#" onclick="appendNewRow('#core-entries'); return false;">Add Single Row</a></li>
+                                                <li><hr class="dropdown-divider opacity-50"></li>
+                                                <li class="px-3 py-2">
+                                                    <div class="flex gap-2" onclick="event.stopPropagation()">
+                                                        <input type="number" class="form-control text-xs w-16 rounded-lg border-gray-200 bulk-row-input" value="5" min="1" id="core-rows-input">
+                                                        <button class="btn btn-orange text-[10px] whitespace-nowrap px-4" type="button" onclick="appendMultipleRows('#core-entries', '#core-rows-input')">Bulk Add</button>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -116,9 +128,21 @@
                                             <div class="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
                                             Support Functions
                                         </span>
-                                        <button class="text-gray-300 hover:text-cyan-500 transition-colors add-row-btn" type="button" onclick="appendNewRow('#support-entries')">
-                                            <i class="fas fa-plus-circle text-lg"></i>
-                                        </button>
+                                        <div class="dropdown">
+                                            <button class="text-gray-300 hover:text-cyan-500 transition-colors add-row-btn" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-plus-circle text-lg"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-2xl rounded-2xl p-2">
+                                                <li><a class="dropdown-item rounded-xl py-2 px-4 text-xs font-bold" href="#" onclick="appendNewRow('#support-entries'); return false;">Add Single Row</a></li>
+                                                <li><hr class="dropdown-divider opacity-50"></li>
+                                                <li class="px-3 py-2">
+                                                    <div class="flex gap-2" onclick="event.stopPropagation()">
+                                                        <input type="number" class="form-control text-xs w-16 rounded-lg border-gray-200 bulk-row-input" value="5" min="1" id="support-rows-input">
+                                                        <button class="btn btn-orange bg-cyan-500 hover:bg-cyan-600 text-[10px] whitespace-nowrap px-4 border-0" type="button" onclick="appendMultipleRows('#support-entries', '#support-rows-input')">Bulk Add</button>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -133,9 +157,21 @@
                                             <div class="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
                                             Strategic Functions
                                         </span>
-                                        <button class="text-gray-300 hover:text-purple-500 transition-colors add-row-btn" type="button" onclick="appendNewRow('#strategic-entries')">
-                                            <i class="fas fa-plus-circle text-lg"></i>
-                                        </button>
+                                        <div class="dropdown">
+                                            <button class="text-gray-300 hover:text-purple-500 transition-colors add-row-btn" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-plus-circle text-lg"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end border-0 shadow-2xl rounded-2xl p-2">
+                                                <li><a class="dropdown-item rounded-xl py-2 px-4 text-xs font-bold" href="#" onclick="appendNewRow('#strategic-entries'); return false;">Add Single Row</a></li>
+                                                <li><hr class="dropdown-divider opacity-50"></li>
+                                                <li class="px-3 py-2">
+                                                    <div class="flex gap-2" onclick="event.stopPropagation()">
+                                                        <input type="number" class="form-control text-xs w-16 rounded-lg border-gray-200 bulk-row-input" value="5" min="1" id="strategic-rows-input">
+                                                        <button class="btn btn-orange bg-purple-500 hover:bg-purple-600 text-[10px] whitespace-nowrap px-4 border-0" type="button" onclick="appendMultipleRows('#strategic-entries', '#strategic-rows-input')">Bulk Add</button>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -175,13 +211,22 @@
 @push('scripts')
 <script>
     window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
-    window.spcrPrintBaseUrl = window.spcrPrintBaseUrl || @json(url('/spcr'));
+    window.spcrPrintBaseUrl = window.spcrPrintBaseUrl || @json(url('/spcr/print'));
     // currentSpcrId is handled by the index page to avoid duplicate declaration
     function isStaffReviewMode() {
         return window.SPCR_CONTEXT === 'staff' || window.location.pathname.includes(@json(route('spcr.staff', [], false)));
     }
 
     function createSpcr() {
+        if (typeof currentSpcrId !== 'undefined' && currentSpcrId) {
+            showAlert(
+                'Existing Document Found',
+                `An SPCR document already exists for ${currentYear}, ${currentSemester === 1 ? '1st Semester' : '2nd Semester'}. Please open the existing document instead of creating a new one.`,
+                'info'
+            );
+            return;
+        }
+
         currentSpcrId = null;
         $('#spcrId').val('');
         $('#spcrDate').val(new Date().toISOString().split('T')[0]);
@@ -210,6 +255,24 @@
         $(containerId).append(template);
         const status = $('#statusValue').val() || 'Draft Target';
         toggleSemesterFields(status);
+    }
+
+    function appendMultipleRows(containerId, inputId) {
+        const count = parseInt($(inputId).val(), 10);
+
+        if (!Number.isFinite(count) || count < 1) {
+            showAlert('Invalid Input', 'Please enter a valid number of rows to add.', 'warning');
+            return;
+        }
+
+        if (count > 200) {
+            showAlert('Input Too Large', 'Please limit bulk add to 200 rows at a time.', 'warning');
+            return;
+        }
+
+        for (let i = 0; i < count; i++) {
+            appendNewRow(containerId);
+        }
     }
 
     function removeRow(btn) {
@@ -247,6 +310,34 @@
     function saveSpcr(isSubmit = true) {
         if (!validateAllRatings(true)) return;
 
+        const coreEntries = getEntriesFromTable('#core-entries');
+        const supportEntries = getEntriesFromTable('#support-entries');
+        const strategicEntries = getEntriesFromTable('#strategic-entries');
+        const requiredFieldErrors = validateRequiredSpcrFields({
+            core_entries: coreEntries,
+            support_entries: supportEntries,
+            strategic_entries: strategicEntries
+        });
+
+        if (requiredFieldErrors.length > 0) {
+            showSpcrRequiredFieldAlert(requiredFieldErrors);
+            return;
+        }
+        const missingSections = [];
+
+        if (coreEntries.length < 1) missingSections.push('Core Entries');
+        if (supportEntries.length < 1) missingSections.push('Support Entries');
+        if (strategicEntries.length < 1) missingSections.push('Strategic Entries');
+
+        if (missingSections.length > 0) {
+            showAlert(
+                'Incomplete SPCR Entries',
+                `Please provide at least one entry for the following section(s): ${missingSections.join(', ')}. Empty rows are not saved.`,
+                'warning'
+            );
+            return;
+        }
+
         let currentStatus = $('#statusValue').val();
         let targetStatus = currentStatus;
 
@@ -263,9 +354,9 @@
             semester: currentSemester,
             spcr_date: $('#spcrDate').val(),
             status: targetStatus,
-            core_entries: getEntriesFromTable('#core-entries'),
-            support_entries: getEntriesFromTable('#support-entries'),
-            strategic_entries: getEntriesFromTable('#strategic-entries'),
+            core_entries: coreEntries,
+            support_entries: supportEntries,
+            strategic_entries: strategicEntries,
         };
 
         const method = currentSpcrId ? 'PUT' : 'POST';
@@ -289,7 +380,20 @@
             },
             body: JSON.stringify(payload)
         })
-        .then(res => res.json())
+        .then(async (res) => {
+            const data = await res.json();
+            if (!res.ok) {
+                if (res.status === 422 && data.errors) {
+                    let errMsg = '';
+                    for (const field in data.errors) {
+                        errMsg += `- ${data.errors[field].join(', ')}\n`;
+                    }
+                    throw new Error(errMsg.trim() || 'Please complete all required SPCR entries.');
+                }
+                throw new Error(data.message || 'Failed to save SPCR record.');
+            }
+            return data;
+        })
         .then(data => {
             toast(isSubmit ? 'SPCR Submitted!' : 'SPCR Saved Successfully');
             $('#spcrModal').modal('hide');
@@ -297,7 +401,7 @@
         })
         .catch(err => {
             console.error(err);
-            showAlert('Error', 'Failed to save SPCR record.', 'error');
+            showAlert('Error', err.message || 'Failed to save SPCR record.', 'error');
         });
     }
 
@@ -308,19 +412,78 @@
             const row = $(this);
             const entry = {
                 id: row.find('.row-id').val(),
-                output: row.find('.output-field').val(),
-                success_indicator: row.find('.indicator-field').val(),
-                accountability: row.find('.accountability-field').val(),
-                actual_accomplishment: row.find('.accomplishment-field').val(),
-                accomplishment_rate: row.find('.acc-rate-field').val(),
-                quantity_rating: row.find('.q-rating').val(),
-                efficiency_rating: row.find('.e-rating').val(),
-                timeliness_rating: row.find('.t-rating').val(),
-                remarks: row.find('.remarks-field').val(),
+                output: (row.find('.output-field').val() || '').trim(),
+                success_indicator: (row.find('.indicator-field').val() || '').trim(),
+                accountability: (row.find('.accountability-field').val() || '').trim(),
+                actual_accomplishment: (row.find('.accomplishment-field').val() || '').trim(),
+                accomplishment_rate: (row.find('.acc-rate-field').val() || '').trim(),
+                quantity_rating: (row.find('.q-rating').val() || '').toString().trim(),
+                efficiency_rating: (row.find('.e-rating').val() || '').toString().trim(),
+                timeliness_rating: (row.find('.t-rating').val() || '').toString().trim(),
+                remarks: (row.find('.remarks-field').val() || '').trim(),
             };
-            if (entry.output || entry.success_indicator) entries.push(entry);
+            const hasContent = [
+                entry.output,
+                entry.success_indicator,
+                entry.accountability,
+                entry.actual_accomplishment,
+                entry.accomplishment_rate,
+                entry.quantity_rating,
+                entry.efficiency_rating,
+                entry.timeliness_rating,
+                entry.remarks
+            ].some(value => value !== null && value !== undefined && value.toString().trim() !== '');
+
+            if (hasContent) entries.push(entry);
         });
         return entries;
+    }
+
+    function validateRequiredSpcrFields(groupedRows) {
+        const labels = {
+            core_entries: 'Core Entries',
+            support_entries: 'Support Entries',
+            strategic_entries: 'Strategic Entries'
+        };
+
+        const errors = [];
+
+        Object.keys(labels).forEach((key) => {
+            const rows = groupedRows[key] || [];
+            rows.forEach((row, index) => {
+                const rowNumber = index + 1;
+                if (!row.output || row.output.trim() === '') {
+                    errors.push(`${labels[key]} row ${rowNumber}: Output is required.`);
+                }
+                if (!row.success_indicator || row.success_indicator.trim() === '') {
+                    errors.push(`${labels[key]} row ${rowNumber}: Success Indicator is required.`);
+                }
+                if (!row.accountability || row.accountability.trim() === '') {
+                    errors.push(`${labels[key]} row ${rowNumber}: Individual Accountable is required.`);
+                }
+            });
+        });
+
+        return errors;
+    }
+
+    function showSpcrRequiredFieldAlert(requiredFieldErrors) {
+        const htmlList = `<ul class="text-left list-disc pl-6 space-y-1">${requiredFieldErrors
+            .map(error => `<li>${$('<div>').text(error).html()}</li>`)
+            .join('')}</ul>`;
+
+        Swal.fire({
+            title: 'Incomplete Required Fields',
+            html: htmlList,
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            customClass: {
+                popup: 'swal2-popup-modern shadow-2xl border border-gray-100',
+                title: 'swal2-title-modern',
+                confirmButton: 'swal2-confirm-modern'
+            },
+            buttonsStyling: false
+        });
     }
 
     function viewSpcr(id) {
@@ -409,6 +572,7 @@
         const settingInputs = $('.output-field, .indicator-field, .accountability-field');
         const evaluationInputs = $('.accomplishment-field, .acc-rate-field, .remarks-field');
         const ratingInputs = $('.q-rating, .e-rating, .t-rating');
+        const bulkRowInputs = $('.bulk-row-input');
         const spcrDateInput = $('#spcrDate');
 
         // Reset all
@@ -417,10 +581,12 @@
 
         if (isTargetDraft) {
             settingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             $('.delete-row-btn, .add-row-btn').show();
         } else if (isAccompDraft) {
             evaluationInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             if (!isStaffReviewMode()) {
                 ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
@@ -447,6 +613,34 @@
     function approveSpcr() {
         if (!validateAllRatings(true)) return;
 
+        const coreEntries = getEntriesFromTable('#core-entries');
+        const supportEntries = getEntriesFromTable('#support-entries');
+        const strategicEntries = getEntriesFromTable('#strategic-entries');
+        const requiredFieldErrors = validateRequiredSpcrFields({
+            core_entries: coreEntries,
+            support_entries: supportEntries,
+            strategic_entries: strategicEntries
+        });
+
+        if (requiredFieldErrors.length > 0) {
+            showSpcrRequiredFieldAlert(requiredFieldErrors);
+            return;
+        }
+        const missingSections = [];
+
+        if (coreEntries.length < 1) missingSections.push('Core Entries');
+        if (supportEntries.length < 1) missingSections.push('Support Entries');
+        if (strategicEntries.length < 1) missingSections.push('Strategic Entries');
+
+        if (missingSections.length > 0) {
+            showAlert(
+                'Incomplete SPCR Entries',
+                `Please provide at least one entry for the following section(s): ${missingSections.join(', ')}. Empty rows are not saved.`,
+                'warning'
+            );
+            return;
+        }
+
         const currentStatus = $('#statusValue').val();
         let confirmMsg = 'Approve Document?';
         if (currentStatus === 'Target Submitted') confirmMsg = 'Approve Targets?';
@@ -457,9 +651,9 @@
         confirmAction(confirmMsg, 'Are you sure you want to approve this SPCR stage?', 'APPROVE', () => {
             const payload = {
                 spcr_date: $('#spcrDate').val(),
-                core_entries: getEntriesFromTable('#core-entries'),
-                support_entries: getEntriesFromTable('#support-entries'),
-                strategic_entries: getEntriesFromTable('#strategic-entries'),
+                core_entries: coreEntries,
+                support_entries: supportEntries,
+                strategic_entries: strategicEntries,
             };
 
             fetch(`${window.spcrApiBaseUrl}/${currentSpcrId}`, {
@@ -513,7 +707,7 @@
             showAlert('Action Required', 'Please save the SPCR first before printing.', 'info');
             return;
         }
-        window.open(`${window.spcrPrintBaseUrl}/${spcrId}/print`, '_blank');
+        window.open(`${window.spcrPrintBaseUrl}/${spcrId}`, '_blank');
     }
 
     function updateStatusIndicator(currentStatus) {

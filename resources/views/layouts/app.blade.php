@@ -10,6 +10,8 @@
 
     {{-- ✅ jQuery --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     {{-- ✅ Bootstrap 5 (optional if you use modals, dropdowns, etc.) --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -144,6 +146,40 @@
 
         .modal-xxl{
             max-width: 95%;
+        }
+
+        .select2-container--default .select2-selection--single {
+            height: 42px;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 6px 10px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 28px;
+            padding-left: 0;
+            color: #111827;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
+            right: 8px;
+        }
+
+        .select2-container--default .select2-dropdown {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+            overflow: hidden;
+        }
+
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 8px 10px;
+            font-size: 0.875rem;
         }
 
         /* 🔹 Sidebar Styles */
@@ -554,6 +590,123 @@
             buttonsStyling: false
         });
     };
+
+    (function () {
+        const MIN_OPTIONS_FOR_SEARCH = 8;
+        const EXCLUDED_FIELD_PATTERN = /(year|semester|month|day|date|status|quarter|week|rating)/i;
+
+        function getFieldSignature(selectEl) {
+            return `${selectEl.id || ''} ${selectEl.name || ''} ${selectEl.className || ''}`;
+        }
+
+        function hasAlphabeticalOptions(selectEl) {
+            const values = Array.from(selectEl.options)
+                .map(opt => (opt.textContent || '').trim())
+                .filter(Boolean);
+            return values.some(v => /[A-Za-z]/.test(v));
+        }
+
+        function shouldEnhance(selectEl) {
+            if (!selectEl || selectEl.multiple || selectEl.disabled) return false;
+            if (selectEl.dataset.noSearch === 'true') return false;
+            if ($(selectEl).data('select2')) return false;
+
+            const forceSearch = selectEl.dataset.searchable === 'true';
+            const signature = getFieldSignature(selectEl);
+            if (!forceSearch && EXCLUDED_FIELD_PATTERN.test(signature)) return false;
+
+            return forceSearch || selectEl.options.length >= MIN_OPTIONS_FOR_SEARCH;
+        }
+
+        function shouldSort(selectEl) {
+            if (!selectEl || selectEl.dataset.preserveOrder === 'true') return false;
+            const forceSort = selectEl.dataset.sortable === 'true';
+            const signature = getFieldSignature(selectEl);
+            if (!forceSort && EXCLUDED_FIELD_PATTERN.test(signature)) return false;
+            return hasAlphabeticalOptions(selectEl);
+        }
+
+        function sortOptionsAlphabetically(selectEl) {
+            const options = Array.from(selectEl.options);
+            if (options.length <= 1) return;
+
+            const selectedValues = new Set(options.filter(opt => opt.selected).map(opt => opt.value));
+            const placeholder = options.find(opt => opt.value === '');
+            const sortable = options.filter(opt => !placeholder || opt !== placeholder);
+
+            sortable.sort((a, b) => {
+                const left = (a.textContent || '').trim();
+                const right = (b.textContent || '').trim();
+                return left.localeCompare(right, undefined, { sensitivity: 'base', numeric: true });
+            });
+
+            const sorted = placeholder ? [placeholder, ...sortable] : sortable;
+            selectEl.innerHTML = '';
+            sorted.forEach(opt => {
+                opt.selected = selectedValues.has(opt.value);
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function enhanceSelect(selectEl) {
+            if (!shouldEnhance(selectEl)) return;
+            if (shouldSort(selectEl)) sortOptionsAlphabetically(selectEl);
+
+            $(selectEl).select2({
+                width: '100%',
+                dropdownAutoWidth: true,
+                minimumResultsForSearch: 0,
+            });
+        }
+
+        function refreshSelect(selectEl) {
+            if (!selectEl) return;
+            if (shouldSort(selectEl)) sortOptionsAlphabetically(selectEl);
+
+            if ($(selectEl).data('select2')) {
+                $(selectEl).trigger('change.select2');
+            } else {
+                enhanceSelect(selectEl);
+            }
+        }
+
+        function enhanceAllSelects(root = document) {
+            const selects = root.querySelectorAll ? root.querySelectorAll('select') : [];
+            selects.forEach(enhanceSelect);
+        }
+
+        let refreshTimer = null;
+        function scheduleRefresh(selectEl) {
+            if (refreshTimer) clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(() => refreshSelect(selectEl), 50);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            enhanceAllSelects(document);
+
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type !== 'childList') return;
+
+                    if (mutation.target && mutation.target.tagName === 'SELECT') {
+                        scheduleRefresh(mutation.target);
+                    }
+
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType !== 1) return;
+                        if (node.tagName === 'SELECT') enhanceSelect(node);
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('select').forEach(enhanceSelect);
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+
+        window.enhanceSearchableSelects = enhanceAllSelects;
+    })();
 </script>
 
     {{-- 🔹 Page Content --}}
