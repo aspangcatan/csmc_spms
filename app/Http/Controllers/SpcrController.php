@@ -124,17 +124,8 @@ class SpcrController extends Controller
     {
         $user = auth()->user();
 
-        $managedSectionIds = DB::connection('user')->table('section')
-            ->where('head', $user->id)
-            ->pluck('id')
-            ->toArray();
-
-        $hasSubSections = !empty($managedSectionIds) && DB::connection('user')->table('section')
-            ->whereIn('subsection', $managedSectionIds)
-            ->exists();
-
-        if (!$user->isDivisionHead() && !$hasSubSections) {
-            abort(403, 'Unauthorized access. Only Division Heads or parent Section Heads can access this module.');
+        if (!$user->canAccessSpcrStaff()) {
+            abort(403, 'Unauthorized access. Only Division Heads or Section Heads with child units can access this module.');
         }
 
         $year = $request->query('year', date('Y'));

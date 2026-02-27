@@ -104,6 +104,29 @@ class User extends Authenticatable
         return \Illuminate\Support\Facades\DB::connection('user')->table('division')->where('head', $this->id)->exists();
     }
 
+    public function hasChildUnits(): bool
+    {
+        $managedSectionIds = \Illuminate\Support\Facades\DB::connection('user')
+            ->table('section')
+            ->where('head', $this->id)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($managedSectionIds)) {
+            return false;
+        }
+
+        return \Illuminate\Support\Facades\DB::connection('user')
+            ->table('section')
+            ->whereIn('subsection', $managedSectionIds)
+            ->exists();
+    }
+
+    public function canAccessSpcrStaff(): bool
+    {
+        return $this->isDivisionHead() || ($this->isSectionHead() && $this->hasChildUnits());
+    }
+
     public function isPmt()
     {
         try {

@@ -91,7 +91,7 @@
             {{-- Supervisor: Team Compliance --}}
             <div class="card-modern p-6 relative overflow-hidden group">
                 <div class="absolute -top-4 -right-4 w-20 h-20 bg-purple-50 rounded-full blur-2xl group-hover:bg-purple-100 transition-colors"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Team Compliance ({{ date('Y') }})</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Team Compliance ({{ $year }} S{{ $semester }})</p>
                 <div class="flex items-end gap-2">
                     <h3 class="text-3xl font-black text-gray-900 leading-none">
                         {{ number_format($supervisorStats['compliance_rate'], 0) }}%
@@ -122,7 +122,7 @@
                     @endif
                 </div>
                 <p class="text-[10px] text-gray-400 mt-5 border-t border-gray-50 pt-4">
-                    Assigned signature requests
+                    IPCR: {{ $supervisorStats['pending_ipcr'] }} | SPCR: {{ $supervisorStats['pending_spcr'] }}
                 </p>
             </div>
         @else
@@ -176,7 +176,7 @@
             @if($supervisorStats)
                 {{-- REAL Rating Distribution --}}
                 <div class="card-modern p-8">
-                    <h3 class="text-sm font-black text-gray-900 tracking-widest uppercase mb-6">Staff Ratings distribution ({{ date('Y') }})</h3>
+                    <h3 class="text-sm font-black text-gray-900 tracking-widest uppercase mb-6">Staff Ratings distribution ({{ $year }} S{{ $semester }})</h3>
                     <div class="space-y-5">
                         @php
                             $distColors = [

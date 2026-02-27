@@ -24,6 +24,14 @@
                     </select>
                 </div>
                 <div class="h-8 w-px bg-gray-100"></div>
+                <div>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Semester</p>
+                    <select id="semesterFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
+                        <option value="1" {{ (int) $semester === 1 ? 'selected' : '' }}>1st Sem</option>
+                        <option value="2" {{ (int) $semester === 2 ? 'selected' : '' }}>2nd Sem</option>
+                    </select>
+                </div>
+                <div class="h-8 w-px bg-gray-100"></div>
                 <div class="text-right">
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total Staff</p>
                     <p class="text-sm font-black text-gray-900 leading-none">{{ count($staffData) }}</p>
@@ -164,10 +172,11 @@
             });
         });
 
-        // Year filter
-        $('#yearFilter').on('change', function() {
-            const year = $(this).val();
-            window.location.href = `{{ route('ipcr.staff') }}?year=${year}`;
+        // Year + semester filter
+        $('#yearFilter, #semesterFilter').on('change', function() {
+            const year = $('#yearFilter').val();
+            const semester = $('#semesterFilter').val();
+            window.location.href = `{{ route('ipcr.staff') }}?year=${year}&semester=${semester}`;
         });
     });
 

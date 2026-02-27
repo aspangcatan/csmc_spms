@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ipcr;
 use Illuminate\Support\Facades\DB;
 use App\Services\IpcrService;
+use App\Services\SpcrService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -12,10 +13,12 @@ use Illuminate\Validation\ValidationException;
 class IpcrController extends Controller
 {
     protected $ipcrService;
+    protected $spcrService;
 
-    public function __construct(IpcrService $ipcrService)
+    public function __construct(IpcrService $ipcrService, SpcrService $spcrService)
     {
         $this->ipcrService = $ipcrService;
+        $this->spcrService = $spcrService;
 
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
@@ -220,12 +223,13 @@ class IpcrController extends Controller
             ->orderBy('semester', 'asc')
             ->get(['year', 'semester', 'final_rating']);
 
-        // 3. Supervisor Stats (Global/Current Year - Not affected by filters)
+        // 3. Supervisor Stats (Affected by selected filters)
         $supervisorStats = null;
         if ($user->isSupervisor()) {
-            $currentYear = date('Y');
-            $staff = $this->ipcrService->getStaffStatusList($userId, $currentYear);
-            $pendingCount = count($this->ipcrService->getPendingApprovals($userId));
+            $ipcrStaff = $this->ipcrService->getStaffStatusList($userId, $year, $semester);
+            $spcrStaff = $this->spcrService->getStaffStatusList($userId, $year, $semester);
+            $ipcrPendingCount = count($this->ipcrService->getPendingApprovals($userId, $year, $semester));
+            $spcrPendingCount = count($this->spcrService->getPendingApprovals($userId, $year, $semester));
             
             $submittedCount = 0;
             $distCounts = [
@@ -236,12 +240,55 @@ class IpcrController extends Controller
                 'Poor' => 0
             ];
 
-            foreach($staff as $s) {
-                if ($s['ipcr']) {
-                    if (!str_contains($s['status'], 'Draft')) {
-                        $submittedCount++;
-                    }
-                    $adj = $s['ipcr']->final_rating_adjective;
+            $combinedByUser = [];
+            foreach ($ipcrStaff as $entry) {
+                $uid = $entry['user']->id;
+                $combinedByUser[$uid] = [
+                    'user' => $entry['user'],
+                    'ipcr' => $entry['ipcr'] ?? null,
+                    'spcr' => null,
+                    'ipcr_status' => $entry['status'] ?? 'NOT SUBMITTED',
+                    'spcr_status' => 'NOT SUBMITTED',
+                ];
+            }
+
+            foreach ($spcrStaff as $entry) {
+                $uid = $entry['user']->id;
+                if (!isset($combinedByUser[$uid])) {
+                    $combinedByUser[$uid] = [
+                        'user' => $entry['user'],
+                        'ipcr' => null,
+                        'spcr' => $entry['spcr'] ?? null,
+                        'ipcr_status' => 'NOT SUBMITTED',
+                        'spcr_status' => $entry['status'] ?? 'NOT SUBMITTED',
+                    ];
+                } else {
+                    $combinedByUser[$uid]['spcr'] = $entry['spcr'] ?? null;
+                    $combinedByUser[$uid]['spcr_status'] = $entry['status'] ?? 'NOT SUBMITTED';
+                }
+            }
+
+            foreach ($combinedByUser as $member) {
+                $hasSubmittedIpcr = !empty($member['ipcr']) && !str_contains($member['ipcr_status'], 'Draft');
+                $hasSubmittedSpcr = !empty($member['spcr']) && !str_contains($member['spcr_status'], 'Draft');
+
+                if ($hasSubmittedIpcr || $hasSubmittedSpcr) {
+                    $submittedCount++;
+                }
+
+                $recordForDist = null;
+                if (!empty($member['ipcr']) && !empty($member['spcr'])) {
+                    $recordForDist = $member['ipcr']->updated_at >= $member['spcr']->updated_at
+                        ? $member['ipcr']
+                        : $member['spcr'];
+                } elseif (!empty($member['ipcr'])) {
+                    $recordForDist = $member['ipcr'];
+                } elseif (!empty($member['spcr'])) {
+                    $recordForDist = $member['spcr'];
+                }
+
+                if ($recordForDist) {
+                    $adj = $recordForDist->final_rating_adjective ?? null;
                     if ($adj && isset($distCounts[$adj])) {
                         $distCounts[$adj]++;
                     }
@@ -249,10 +296,12 @@ class IpcrController extends Controller
             }
 
             $supervisorStats = [
-                'staff_count' => count($staff),
-                'pending_approvals' => $pendingCount,
-                'compliance_rate' => count($staff) > 0 ? ($submittedCount / count($staff)) * 100 : 0,
-                'distribution' => $distCounts
+                'staff_count' => count($combinedByUser),
+                'pending_approvals' => $ipcrPendingCount + $spcrPendingCount,
+                'pending_ipcr' => $ipcrPendingCount,
+                'pending_spcr' => $spcrPendingCount,
+                'compliance_rate' => count($combinedByUser) > 0 ? ($submittedCount / count($combinedByUser)) * 100 : 0,
+                'distribution' => $distCounts,
             ];
         }
         
@@ -268,15 +317,19 @@ class IpcrController extends Controller
     public function staff(Request $request)
     {
         $year = $request->query('year', date('Y'));
-        $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year);
+        $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
+        $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year, $semester);
         
-        return view('ipcr.staff', compact('staffData', 'year'));
+        return view('ipcr.staff', compact('staffData', 'year', 'semester'));
     }
 
     public function getPending(Request $request)
     {
         $userId = $request->query('user_id') ?? auth()->id() ?? 1;
-        return response()->json($this->ipcrService->getPendingApprovals($userId));
+        $year = $request->query('year');
+        $semester = $request->query('semester');
+
+        return response()->json($this->ipcrService->getPendingApprovals($userId, $year, $semester));
     }
 
     public function approve(Request $request, $id)

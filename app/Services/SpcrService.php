@@ -214,7 +214,7 @@ class SpcrService
                 ->where('id', $user->section)
                 ->first();
 
-            // Unit-head flow: section has a parent subsection, so immediate supervisor
+            // Unit-head flow: section has a parent section, so immediate supervisor
             // should be the head of that parent section.
             if ($section && !empty($section->subsection)) {
                 $supervisorId = DB::connection('user')
@@ -323,7 +323,34 @@ class SpcrService
         return $spcr->logs()->with('user')->orderBy('created_at', 'desc')->get();
     }
 
-    public function getStaffStatusList($userId, $year = null)
+    public function getPendingApprovals($userId, $year = null, $semester = null)
+    {
+        return Spcr::where(function ($query) use ($userId) {
+            $query->where(function ($roleQuery) use ($userId) {
+                // As Supervisor
+                $roleQuery->where('supervisor_id', $userId)
+                    ->whereIn('status', ['Target Submitted', 'Accomplishment Submitted']);
+            })->orWhere(function ($roleQuery) use ($userId) {
+                // As Division Head
+                $roleQuery->where('division_head_id', $userId)
+                    ->where('status', 'Supervisor Approved');
+            })->orWhere(function ($roleQuery) use ($userId) {
+                // As PMT (final level)
+                $roleQuery->where('highest_supervisor', $userId)
+                    ->where('status', 'Division Head Approved');
+            });
+        })
+        ->when($year, function ($query) use ($year) {
+            $query->where('year', $year);
+        })
+        ->when($semester, function ($query) use ($semester) {
+            $query->where('semester', $semester);
+        })
+        ->with('user')
+        ->get();
+    }
+
+    public function getStaffStatusList($userId, $year = null, $semester = null)
     {
         $year = $year ?? date('Y');
         $user = \App\Models\User::find($userId);
@@ -345,7 +372,7 @@ class SpcrService
             $staffIds = array_merge($staffIds, $divisionSectionHeadIds);
         }
 
-        // If user heads a parent section that has child subsections,
+        // If user heads a parent section that has child sections,
         // include those child section heads as managed staff.
         $managedSectionIds = DB::connection('user')->table('section')
             ->where('head', $userId)
@@ -371,11 +398,17 @@ class SpcrService
 
         $results = [];
         foreach($staff as $member) {
-            // Get latest SPCR for the year (preferring sem 2 if both exist)
-            $spcr = Spcr::where('userid', $member->id)
-                ->where('year', $year)
-                ->orderBy('semester', 'desc')
-                ->first();
+            $spcrQuery = Spcr::where('userid', $member->id)
+                ->where('year', $year);
+
+            if (!is_null($semester)) {
+                $spcrQuery->where('semester', $semester);
+            } else {
+                // Default behavior for pages using year-only filter.
+                $spcrQuery->orderBy('semester', 'desc');
+            }
+
+            $spcr = $spcrQuery->first();
                 
             $results[] = [
                 'user' => $member,

@@ -328,18 +328,21 @@
         </a>
         @endif
 
-        @if(auth()->user()->isSupervisor())
+        @if(auth()->user()->isSupervisor() || auth()->user()->isSectionHead())
         <a href="{{ route('ipcr.staff') }}" class="sidebar-item {{ Request::routeIs('ipcr.staff') ? 'active' : '' }}">
             <i class="fas fa-users-cog"></i>
             <span>Staff IPCR</span>
         </a>
         @endif
 
-        @if(auth()->user()->isDivisionHead())
+        @if(auth()->user()->canAccessSpcrStaff())
         <a href="{{ route('spcr.staff') }}" class="sidebar-item {{ Request::routeIs('spcr.staff') ? 'active' : '' }}">
             <i class="fas fa-shield-alt"></i>
             <span>Staff SPCR</span>
         </a>
+        @endif
+
+        @if(auth()->user()->isDivisionHead())
         <a href="{{ route('division_head.approvals') }}" class="sidebar-item {{ Request::routeIs('division_head.approvals') ? 'active' : '' }}">
             <i class="fas fa-check-double"></i>
             <span>Division Approvals</span>

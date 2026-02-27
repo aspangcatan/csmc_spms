@@ -296,22 +296,31 @@ class IpcrService
         });
     }
 
-    public function getPendingApprovals($userId)
+    public function getPendingApprovals($userId, $year = null, $semester = null)
     {
         return Ipcr::where(function ($query) use ($userId) {
-            // As Supervisor
-            $query->where('supervisor_id', $userId)
-                  ->whereIn('status', ['Target Submitted', 'Accomplishment Submitted']);
-        })->orWhere(function ($query) use ($userId) {
-            // As Division Head
-            $query->where('division_head', $userId)
-                  ->where('status', 'Supervisor Approved');
-        })->orWhere(function ($query) use ($userId) {
-            // AS PMT (assuming highest_supervisor or specific role check)
-            // For now, let's treat highest_supervisor as the final level (PMT)
-            $query->where('highest_supervisor', $userId)
-                  ->where('status', 'Division Head Approved');
-        })->with('user')->get();
+            $query->where(function ($roleQuery) use ($userId) {
+                // As Supervisor
+                $roleQuery->where('supervisor_id', $userId)
+                    ->whereIn('status', ['Target Submitted', 'Accomplishment Submitted']);
+            })->orWhere(function ($roleQuery) use ($userId) {
+                // As Division Head
+                $roleQuery->where('division_head', $userId)
+                    ->where('status', 'Supervisor Approved');
+            })->orWhere(function ($roleQuery) use ($userId) {
+                // As PMT (final level)
+                $roleQuery->where('highest_supervisor', $userId)
+                    ->where('status', 'Division Head Approved');
+            });
+        })
+        ->when($year, function ($query) use ($year) {
+            $query->where('year', $year);
+        })
+        ->when($semester, function ($query) use ($semester) {
+            $query->where('semester', $semester);
+        })
+        ->with('user')
+        ->get();
     }
 
     public function approveIpcr($id, $userId, $comments = null)
@@ -417,7 +426,7 @@ class IpcrService
                         // Default: immediate supervisor is the user's own section head.
                         $sectionHead = $section->head;
 
-                        // If current section is a subsection, highest supervisor should be
+                        // If current section has a parent section, highest supervisor should be
                         // the head of its parent/main section.
                         if (!empty($section->subsection)) {
                             $parentSectionHead = DB::connection('user')
@@ -449,7 +458,7 @@ class IpcrService
         ];
     }
 
-    public function getStaffStatusList($userId, $year = null)
+    public function getStaffStatusList($userId, $year = null, $semester = null)
     {
         $year = $year ?? date('Y');
         
@@ -458,16 +467,37 @@ class IpcrService
         
         // Get all employees belonging to these sections
         $staff = \App\Models\User::whereIn('section', $sections)
-        ->where('id', '!=', $userId) // Don't include self
-        ->get();
+            ->where('id', '!=', $userId) // Don't include self
+            ->get();
+
+        // Exclude unit heads from Staff IPCR; they are handled in Staff SPCR.
+        $unitHeadIds = DB::connection('user')->table('section')
+            ->whereNotNull('head')
+            ->whereNotNull('subsection')
+            ->where('subsection', '!=', '')
+            ->where('subsection', '!=', '0')
+            ->pluck('head')
+            ->unique()
+            ->toArray();
+
+        if (!empty($unitHeadIds)) {
+            $staff = $staff->whereNotIn('id', $unitHeadIds)->values();
+        }
         
         $results = [];
         foreach($staff as $member) {
-            // Get latest IPCR status for the year (preferring sem 2 if both exist)
-            $ipcr = Ipcr::where('userid', $member->id)
-                ->where('year', $year)
-                ->orderBy('semester', 'desc')
-                ->first();
+            $ipcrQuery = Ipcr::where('userid', $member->id)
+                ->where('year', $year);
+
+            if (!is_null($semester)) {
+                // Filter to exact selected semester for dashboard cards.
+                $ipcrQuery->where('semester', $semester);
+            } else {
+                // Default behavior for pages using year-only filter.
+                $ipcrQuery->orderBy('semester', 'desc');
+            }
+
+            $ipcr = $ipcrQuery->first();
                 
             $results[] = [
                 'user' => $member,
