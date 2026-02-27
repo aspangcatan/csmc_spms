@@ -125,13 +125,33 @@ class SpcrController extends Controller
         $user = auth()->user();
 
         if (!$user->canAccessSpcrStaff()) {
-            abort(403, 'Unauthorized access. Only Division Heads or Section Heads with child units can access this module.');
+            abort(403, 'Unauthorized access. You do not have permission to view staff SPCR records.');
         }
 
         $year = $request->query('year', date('Y'));
-        $staffData = $this->spcrService->getStaffStatusList(auth()->id(), $year);
+        $division = $request->query('division');
+        $section = $request->query('section');
+        $perPage = 10;
+
+        $staffData = $this->spcrService->getStaffStatusList(auth()->id(), $year, null, [
+            'division' => $division,
+            'section' => $section,
+        ], $perPage);
+
+        $divisions = DB::connection('user')
+            ->table('division')
+            ->orderBy('description')
+            ->get(['id', 'description']);
+
+        $sections = DB::connection('user')
+            ->table('section')
+            ->when($division, function ($query) use ($division) {
+                $query->where('division', $division);
+            })
+            ->orderBy('description')
+            ->get(['id', 'description', 'division']);
         
-        return view('spcr.staff', compact('staffData', 'year'));
+        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section'));
     }
 
     public function print($id)

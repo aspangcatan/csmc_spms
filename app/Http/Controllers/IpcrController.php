@@ -316,11 +316,36 @@ class IpcrController extends Controller
 
     public function staff(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->canAccessStaffIpcr()) {
+            abort(403, 'Unauthorized access. You do not have permission to view staff IPCR records.');
+        }
+
         $year = $request->query('year', date('Y'));
         $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
-        $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year, $semester);
+        $division = $request->query('division');
+        $section = $request->query('section');
+        $perPage = 10;
+
+        $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year, $semester, [
+            'division' => $division,
+            'section' => $section,
+        ], $perPage);
+
+        $divisions = DB::connection('user')
+            ->table('division')
+            ->orderBy('description')
+            ->get(['id', 'description']);
+
+        $sections = DB::connection('user')
+            ->table('section')
+            ->when($division, function ($query) use ($division) {
+                $query->where('division', $division);
+            })
+            ->orderBy('description')
+            ->get(['id', 'description', 'division']);
         
-        return view('ipcr.staff', compact('staffData', 'year', 'semester'));
+        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section'));
     }
 
     public function getPending(Request $request)

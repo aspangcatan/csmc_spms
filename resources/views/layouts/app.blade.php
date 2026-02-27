@@ -328,7 +328,7 @@
         </a>
         @endif
 
-        @if(auth()->user()->isSupervisor() || auth()->user()->isSectionHead())
+        @if(auth()->user()->canAccessStaffIpcr())
         <a href="{{ route('ipcr.staff') }}" class="sidebar-item {{ Request::routeIs('ipcr.staff') ? 'active' : '' }}">
             <i class="fas fa-users-cog"></i>
             <span>Staff IPCR</span>

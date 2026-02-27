@@ -24,9 +24,33 @@
                     </select>
                 </div>
                 <div class="h-8 w-px bg-gray-100"></div>
+                <div>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Division</p>
+                    <select id="divisionFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
+                        <option value="">All</option>
+                        @foreach($divisions as $item)
+                            <option value="{{ $item->id }}" {{ (string) $division === (string) $item->id ? 'selected' : '' }}>
+                                {{ $item->description }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="h-8 w-px bg-gray-100"></div>
+                <div>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Section</p>
+                    <select id="sectionFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
+                        <option value="">All</option>
+                        @foreach($sections as $item)
+                            <option value="{{ $item->id }}" {{ (string) $section === (string) $item->id ? 'selected' : '' }}>
+                                {{ $item->description }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="h-8 w-px bg-gray-100"></div>
                 <div class="text-right">
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total Records</p>
-                    <p class="text-sm font-black text-gray-900 leading-none">{{ count($staffData) }}</p>
+                    <p class="text-sm font-black text-gray-900 leading-none">{{ $staffData->total() }}</p>
                 </div>
             </div>
         </div>
@@ -53,6 +77,7 @@
                 <thead>
                     <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
                         <th class="px-8 py-5">Division / Head</th>
+                        <th class="px-6 py-5">Section</th>
                         <th class="px-6 py-5">Rating Period</th>
                         <th class="px-6 py-5">Date Submitted</th>
                         <th class="px-6 py-5">Status</th>
@@ -72,6 +97,9 @@
                                         <p class="text-[10px] text-gray-400 font-medium leading-none department-name">{{ $data['user']->division_name }}</p>
                                     </div>
                                 </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <p class="text-xs font-bold text-gray-700 section-name">{{ $data['user']->section_name }}</p>
                             </td>
                             <td class="px-6 py-5">
                                 @if($data['spcr'])
@@ -117,7 +145,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-8 py-20 text-center">
+                            <td colspan="6" class="px-8 py-20 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 bg-gray-50 rounded-[2rem] flex items-center justify-center mb-4 border border-gray-100">
                                         <i class="fas fa-project-diagram text-2xl text-gray-200"></i>
@@ -134,12 +162,10 @@
         
         <div class="px-8 py-6 bg-gray-50/50 border-t border-gray-100 flex justify-between items-center">
             <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                Showing {{ count($staffData) }} of {{ count($staffData) }} assessments
+                Showing {{ $staffData->firstItem() ?? 0 }}-{{ $staffData->lastItem() ?? 0 }} of {{ $staffData->total() }} assessments
             </p>
-            <div class="flex gap-1">
-                <button class="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-all"><i class="fas fa-chevron-left text-[10px]"></i></button>
-                <button class="w-8 h-8 rounded-lg bg-gray-900 border border-gray-900 flex items-center justify-center text-white text-[10px] font-bold">1</button>
-                <button class="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-all"><i class="fas fa-chevron-right text-[10px]"></i></button>
+            <div>
+                {{ $staffData->appends(request()->query())->links() }}
             </div>
         </div>
     </div>
@@ -166,10 +192,28 @@
             });
         });
 
-        // Year filter
+        function applyFilters(resetSection = false) {
+            const year = $('#yearFilter').val();
+            const division = $('#divisionFilter').val();
+            const section = resetSection ? '' : $('#sectionFilter').val();
+            const params = new URLSearchParams({ year });
+
+            if (division) params.set('division', division);
+            if (section) params.set('section', section);
+
+            window.location.href = `{{ route('spcr.staff') }}?${params.toString()}`;
+        }
+
         $('#yearFilter').on('change', function() {
-            const year = $(this).val();
-            window.location.href = `{{ route('spcr.staff') }}?year=${year}`;
+            applyFilters(false);
+        });
+
+        $('#divisionFilter').on('change', function() {
+            applyFilters(true);
+        });
+
+        $('#sectionFilter').on('change', function() {
+            applyFilters(false);
         });
     });
 </script>

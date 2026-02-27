@@ -124,7 +124,40 @@ class User extends Authenticatable
 
     public function canAccessSpcrStaff(): bool
     {
-        return $this->isDivisionHead() || ($this->isSectionHead() && $this->hasChildUnits());
+        return $this->hasAdminAccessRight() || $this->isDivisionHead() || ($this->isSectionHead() && $this->hasChildUnits());
+    }
+
+    public function canAccessStaffIpcr(): bool
+    {
+        return $this->hasAdminAccessRight() || $this->isSupervisor() || $this->isSectionHead();
+    }
+
+    public function hasAdminAccessRight(): bool
+    {
+        try {
+            $query = \Illuminate\Support\Facades\DB::connection('user')
+                ->table('user_priv')
+                ->where('user_id', $this->id)
+                ->where('syscode', 'e-spms');
+
+            $schema = \Illuminate\Support\Facades\DB::connection('user')->getSchemaBuilder();
+            if ($schema->hasColumn('user_priv', 'access_rights')) {
+                return (clone $query)
+                    ->whereRaw('LOWER(TRIM(access_rights)) = ?', ['admin'])
+                    ->exists();
+            }
+
+            // Legacy/user DB currently stores rights in `level` (e.g., ADMIN).
+            if ($schema->hasColumn('user_priv', 'level')) {
+                return (clone $query)
+                    ->whereRaw('LOWER(TRIM(level)) = ?', ['admin'])
+                    ->exists();
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public function isPmt()

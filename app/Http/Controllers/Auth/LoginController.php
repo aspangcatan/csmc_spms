@@ -68,14 +68,14 @@ class LoginController extends Controller
 
         // Update password with hashing
         $newHashedPassword = Hash::make($request->new_password);
-        
+
         try {
             // Update the 'user' connection specifically
             DB::connection('user')
                 ->table('users')
                 ->where('id', $user->id)
                 ->update(['password' => $newHashedPassword]);
-                
+
             return response()->json(['message' => 'Password updated successfully.']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Failed to update password: ' . $e->getMessage()], 500);

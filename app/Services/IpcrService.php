@@ -458,34 +458,83 @@ class IpcrService
         ];
     }
 
-    public function getStaffStatusList($userId, $year = null, $semester = null)
+    public function getStaffStatusList($userId, $year = null, $semester = null, array $filters = [], ?int $perPage = null)
     {
         $year = $year ?? date('Y');
-        
-        // Find sections where the user is the head
-        $sections = DB::connection('user')->table('section')->where('head', $userId)->pluck('id')->toArray();
-        
-        // Get all employees belonging to these sections
-        $staff = \App\Models\User::whereIn('section', $sections)
-            ->where('id', '!=', $userId) // Don't include self
-            ->get();
+        $actingUser = \App\Models\User::find($userId);
+        if (!$actingUser) {
+            return [];
+        }
 
-        // Exclude unit heads from Staff IPCR; they are handled in Staff SPCR.
-        $unitHeadIds = DB::connection('user')->table('section')
+        $divisionId = $filters['division'] ?? null;
+        $sectionId = $filters['section'] ?? null;
+        $isAdmin = $actingUser->hasAdminAccessRight();
+
+        $staffQuery = \App\Models\User::query()
+            ->where('id', '!=', $userId);
+
+        if (!empty($divisionId)) {
+            $staffQuery->where('division', $divisionId);
+        }
+
+        if (!empty($sectionId)) {
+            $staffQuery->where('section', $sectionId);
+        }
+
+        if (!$isAdmin) {
+            // Find sections where the user is the head.
+            $sections = DB::connection('user')
+                ->table('section')
+                ->where('head', $userId)
+                ->pluck('id')
+                ->toArray();
+
+            $staffQuery->whereIn('section', $sections);
+
+            // Exclude unit heads from Staff IPCR; they are handled in Staff SPCR.
+            $unitHeadIds = DB::connection('user')->table('section')
+                ->whereNotNull('head')
+                ->whereNotNull('subsection')
+                ->where('subsection', '!=', '')
+                ->where('subsection', '!=', '0')
+                ->pluck('head')
+                ->unique()
+                ->toArray();
+
+            if (!empty($unitHeadIds)) {
+                $staffQuery->whereNotIn('id', $unitHeadIds);
+            }
+        }
+
+        // Staff IPCR must show only standard employees:
+        // exclude all section heads (includes unit heads and main section heads).
+        $sectionHeadIds = DB::connection('user')->table('section')
             ->whereNotNull('head')
-            ->whereNotNull('subsection')
-            ->where('subsection', '!=', '')
-            ->where('subsection', '!=', '0')
             ->pluck('head')
             ->unique()
             ->toArray();
 
-        if (!empty($unitHeadIds)) {
-            $staff = $staff->whereNotIn('id', $unitHeadIds)->values();
+        if (!empty($sectionHeadIds)) {
+            $staffQuery->whereNotIn('id', $sectionHeadIds);
         }
-        
+
+        $staffQuery->orderBy('lname')->orderBy('fname');
+
+        if ($perPage) {
+            $staffPaginator = $staffQuery->paginate($perPage);
+            $rows = $this->buildStaffStatusRows($staffPaginator->getCollection(), $year, $semester);
+            $staffPaginator->setCollection(collect($rows));
+            return $staffPaginator;
+        }
+
+        $staff = $staffQuery->get();
+        return $this->buildStaffStatusRows($staff, $year, $semester);
+    }
+
+    protected function buildStaffStatusRows($staff, $year, $semester = null): array
+    {
         $results = [];
-        foreach($staff as $member) {
+        foreach ($staff as $member) {
             $ipcrQuery = Ipcr::where('userid', $member->id)
                 ->where('year', $year);
 
@@ -506,7 +555,7 @@ class IpcrService
                 'date_submitted' => $this->getSubmissionDate($ipcr)
             ];
         }
-        
+
         return $results;
     }
 

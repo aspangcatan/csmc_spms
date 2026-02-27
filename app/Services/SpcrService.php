@@ -350,7 +350,7 @@ class SpcrService
         ->get();
     }
 
-    public function getStaffStatusList($userId, $year = null, $semester = null)
+    public function getStaffStatusList($userId, $year = null, $semester = null, array $filters = [], ?int $perPage = null)
     {
         $year = $year ?? date('Y');
         $user = \App\Models\User::find($userId);
@@ -358,46 +358,89 @@ class SpcrService
             return [];
         }
 
-        $divisionId = $user->division;
-        $isDivisionHead = $user->isDivisionHead();
-        $staffIds = [];
-
-        if ($isDivisionHead && $divisionId) {
-            $divisionSectionHeadIds = DB::connection('user')->table('section')
-                ->where('division', $divisionId)
-                ->whereNotNull('head')
-                ->pluck('head')
-                ->toArray();
-
-            $staffIds = array_merge($staffIds, $divisionSectionHeadIds);
-        }
-
-        // If user heads a parent section that has child sections,
-        // include those child section heads as managed staff.
-        $managedSectionIds = DB::connection('user')->table('section')
-            ->where('head', $userId)
-            ->pluck('id')
+        $divisionFilter = $filters['division'] ?? null;
+        $sectionFilter = $filters['section'] ?? null;
+        $isAdmin = $user->hasAdminAccessRight();
+        $sectionHeadIds = DB::connection('user')->table('section')
+            ->whereNotNull('head')
+            ->pluck('head')
+            ->unique()
             ->toArray();
 
-        if (!empty($managedSectionIds)) {
-            $subSectionHeadIds = DB::connection('user')->table('section')
-                ->whereIn('subsection', $managedSectionIds)
-                ->whereNotNull('head')
-                ->pluck('head')
-                ->toArray();
-
-            $staffIds = array_merge($staffIds, $subSectionHeadIds);
-        }
-
-        $staffIds = array_values(array_unique(array_filter($staffIds, fn($id) => (int) $id !== (int) $userId)));
-        if (empty($staffIds)) {
+        if (empty($sectionHeadIds)) {
             return [];
         }
 
-        $staff = \App\Models\User::whereIn('id', $staffIds)->get();
+        $staffQuery = \App\Models\User::query()
+            ->where('id', '!=', $userId)
+            // Staff SPCR must show only heads (unit head + section head).
+            ->whereIn('id', $sectionHeadIds);
 
+        if (!empty($divisionFilter)) {
+            $staffQuery->where('division', $divisionFilter);
+        }
+
+        if (!empty($sectionFilter)) {
+            $staffQuery->where('section', $sectionFilter);
+        }
+
+        if (!$isAdmin) {
+            $divisionId = $user->division;
+            $isDivisionHead = $user->isDivisionHead();
+            $staffIds = [];
+
+            if ($isDivisionHead && $divisionId) {
+                $divisionSectionHeadIds = DB::connection('user')->table('section')
+                    ->where('division', $divisionId)
+                    ->whereNotNull('head')
+                    ->pluck('head')
+                    ->toArray();
+
+                $staffIds = array_merge($staffIds, $divisionSectionHeadIds);
+            }
+
+            // If user heads a parent section that has child sections,
+            // include those child section heads as managed staff.
+            $managedSectionIds = DB::connection('user')->table('section')
+                ->where('head', $userId)
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($managedSectionIds)) {
+                $subSectionHeadIds = DB::connection('user')->table('section')
+                    ->whereIn('subsection', $managedSectionIds)
+                    ->whereNotNull('head')
+                    ->pluck('head')
+                    ->toArray();
+
+                $staffIds = array_merge($staffIds, $subSectionHeadIds);
+            }
+
+            $staffIds = array_values(array_unique(array_filter($staffIds, fn($id) => (int) $id !== (int) $userId)));
+            if (empty($staffIds)) {
+                return [];
+            }
+
+            $staffQuery->whereIn('id', $staffIds);
+        }
+
+        $staffQuery->orderBy('lname')->orderBy('fname');
+
+        if ($perPage) {
+            $staffPaginator = $staffQuery->paginate($perPage);
+            $rows = $this->buildStaffStatusRows($staffPaginator->getCollection(), $year, $semester);
+            $staffPaginator->setCollection(collect($rows));
+            return $staffPaginator;
+        }
+
+        $staff = $staffQuery->get();
+        return $this->buildStaffStatusRows($staff, $year, $semester);
+    }
+
+    protected function buildStaffStatusRows($staff, $year, $semester = null): array
+    {
         $results = [];
-        foreach($staff as $member) {
+        foreach ($staff as $member) {
             $spcrQuery = Spcr::where('userid', $member->id)
                 ->where('year', $year);
 
@@ -417,7 +460,7 @@ class SpcrService
                 'date_submitted' => $this->getSubmissionDate($spcr)
             ];
         }
-        
+
         return $results;
     }
 
