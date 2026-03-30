@@ -635,7 +635,7 @@
                 }
                 
                 // Disable save button if not owner and not in editable status
-                const isEditableByOwner = ['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(ipcr.status);
+                const isEditableByOwner = ['Draft Target', 'Target Submitted', 'Target Approved', 'Draft Accomplishment'].includes(ipcr.status);
                 if (ipcr.userid != authUserId || !isEditableByOwner) {
                     $('#handleSaveBtn').hide();
                 } else {
@@ -672,9 +672,7 @@
         $('.delete-row-btn, .dropdown').show();
         
         // Target Phase Logic
-        const isTargetPhase = status === 'Draft Target';
-        const isEvaluationPhase = ['Target Approved', 'Draft Accomplishment', 'Accomplishment Submitted'].includes(status);
-        const isReadOnly = ['Target Submitted', 'Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
+        const isReadOnly = ['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
 
         // Inputs for the "Success Indicators" / "Output" (Setting phase)
         const settingInputs = $('td:nth-child(1) textarea, td:nth-child(2) textarea');
@@ -692,8 +690,8 @@
             return;
         }
 
-        if (status === 'Draft Target') {
-            // Can edit targets, but STRCTLY NOT accomplishments or ratings
+        if (status === 'Draft Target' || status === 'Target Submitted') {
+            // Can edit targets, but strictly not accomplishments or ratings
             settingInputs.prop('disabled', false).removeClass('bg-gray-100 cursor-not-allowed');
             // We use a broader selector to ensure all evaluation fields are locked
             $('.accomplishment-field textarea, .rating-field input, .remarks-field textarea').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
@@ -710,8 +708,10 @@
             btnText.text('Submit Target').show().closest('button').show();
         } else if (status === 'Target Approved' || status === 'Draft Accomplishment') {
             btnText.text('Submit Accomplishment').show().closest('button').show();
-        } else if (['Target Submitted', 'Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status)) {
+        } else if (['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status)) {
             btnText.hide().closest('button').hide();
+        } else if (status === 'Target Submitted') {
+            btnText.text('Save Changes').show().closest('button').show();
         } else {
             btnText.text('Save Changes').show().closest('button').show();
         }

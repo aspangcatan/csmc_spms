@@ -221,7 +221,7 @@
 </head>
 <body>
     <button class="print-button no-print" onclick="window.print()">Print SPCR</button>
-
+    
     <div class="print-container">
         @php
             $year = (int) $spcr->year;
@@ -234,7 +234,7 @@
                 : ($spcr->semester == 1 ? "June {$year}" : "December {$year}");
 
             $spcrDateDisplay = $spcr->spcr_date ? \Carbon\Carbon::parse($spcr->spcr_date)->format('F j, Y') : '';
-            $doneDateDisplay = $spcr->spcr_date ? \Carbon\Carbon::parse($spcr->spcr_date)->format('m/d/Y') : '';
+            
 
             $coreEntries = $spcr->entries->where('category', 'core')->values();
             $supportEntries = $spcr->entries->where('category', 'support')->values();
@@ -289,10 +289,17 @@
             <table>
                 <tr>
                     <td colspan="15" class="commitment-text no-border-top">
-                        I, <span class="underline">{{ strtoupper($spcr->user->name ?? 'NAME') }}</span>,
-                        <span class="underline">{{ $spcr->user->designation_name ?? 'Position' }}</span>,
-                        of the <span class="underline">{{ $spcr->user->division_name ?? 'Division-Section' }}</span>, of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period
-                        <span class="underline">{{ $periodFrom }} to {{ $periodTo }}</span>.
+                        I, <strong><span class="underline">
+                              {{ strtoupper(trim(
+    ($spcr->user->fname ?? '') . ' ' .
+    (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
+    ($spcr->user->lname ?? '') .
+    (!empty($spcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+)) }}
+</span></strong>,
+                        <span class="underline bold">{{ $spcr->user->designation_name ?? 'Position' }}</span>,
+                        of the <span class="underline bold">{{  $spcr->user->division_name }} - {{  $spcr->user->section_name }}[{{ $spcr->user->section_acronym ?? '' }}]</span>, of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period
+                        <span class="underline bold">{{ $periodFrom }} to {{ $periodTo }}</span>.
                     </td>
                 </tr>
             </table>
@@ -303,7 +310,14 @@
                         <strong>Name of Section Chief:</strong>
                     </td>
                     <td colspan="7" class="center" style="vertical-align: middle; border-top: none; border-left: none; border-right: none;">
-                        <strong><u>{{ strtoupper($spcr->user->name ?? 'NAME') }}</u></strong>
+                        <strong><u>
+                          {{ strtoupper(trim(
+    ($spcr->user->fname ?? '') . ' ' .
+    (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
+    ($spcr->user->lname ?? '') .
+    (!empty($spcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+)) }}    
+                        </u></strong>
                     </td>
                     <td colspan="2" class="text-start" style="vertical-align: middle; border-top: none; border-left: none;">
                         <strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $spcrDateDisplay }}</strong></span>
@@ -311,10 +325,17 @@
                 </tr>
                 <tr>
                     <td colspan="13" class="no-border-bottom"><strong>Approved By:</strong></td>
-                    <td colspan="2"><strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $doneDateDisplay }}</strong></span></td>
+                    <td colspan="2"><strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $spcrDateDisplay }}</strong></span></td>
                 </tr>
                 <tr>
-                    <td colspan="13" class="center no-border-top"><strong><u>{{ strtoupper($spcr->supervisor->name ?? 'N/A') }}</u></strong></td>
+                    <td colspan="13" class="center no-border-top"><strong><u>
+                        {{ strtoupper(trim(
+    ($spcr->supervisor->fname ?? '') . ' ' .
+    (!empty($spcr->supervisor->mname) ? substr($spcr->supervisor->mname, 0, 1) . '. ' : '') .
+    ($spcr->supervisor->lname ?? '') .
+    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '')
+)) }}        
+                    </u></strong></td>
                     <td colspan="2" rowspan="2" class="center bold" style="vertical-align: middle">{{ $spcrDateDisplay }}</td>
                 </tr>
                 <tr>
@@ -482,7 +503,14 @@
                 </tr>
                 <tr class="center">
                     <td colspan="5" rowspan="2" style="height: 68px; vertical-align: bottom; padding-bottom: 8px;">
-                        <strong><u>{{ strtoupper($spcr->user->name ?? '') }}</u></strong>
+                        <strong><u>
+                             {{ strtoupper(trim(
+    ($spcr->user->fname ?? '') . ' ' .
+    (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
+    ($spcr->user->lname ?? '') .
+    (!empty($spcr->user->suffix) ? ' ' . $spcr->user->suffix : '')
+)) }}        
+                        </u></strong>
                     </td>
                     <td colspan="3" rowspan="2"></td>
                     <td colspan="5" class="medium-text center" style="height: 20px;">
@@ -492,7 +520,14 @@
                 </tr>
                 <tr>
                     <td colspan="5" style="vertical-align: bottom; padding-bottom: 8px;" class="center">
-                        <strong><u>{{ strtoupper($spcr->supervisor->name ?? '') }}</u></strong>
+                        <strong><u>
+                               {{ strtoupper(trim(
+    ($spcr->supervisor->fname ?? '') . ' ' .
+    (!empty($spcr->supervisor->mname) ? substr($spcr->supervisor->mname, 0, 1) . '. ' : '') .
+    ($spcr->supervisor->lname ?? '') .
+    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '')
+)) }}        
+                        </u></strong>
                     </td>
                     <td colspan="2"></td>
                 </tr>

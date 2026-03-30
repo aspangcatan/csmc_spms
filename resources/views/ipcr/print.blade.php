@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>IPCR Form - Print</title>
@@ -14,6 +15,7 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+
             .no-print {
                 display: none !important;
             }
@@ -33,6 +35,12 @@
             background: #fff;
         }
 
+        .annex {
+            text-align: right;
+            font-size: 9px;
+            margin-bottom: 2px;
+        }
+
         .print-container {
             width: 100%;
             max-width: 100%;
@@ -47,7 +55,8 @@
             margin-bottom: 0;
         }
 
-        td, th {
+        td,
+        th {
             border: 1px solid #000;
             padding: 2px 4px;
             vertical-align: top;
@@ -198,7 +207,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             z-index: 1000;
         }
 
@@ -237,13 +246,14 @@
         }
     </style>
 </head>
+
 <body>
     <button class="print-button no-print" onclick="window.print()">🖨️ Print IPCR</button>
 
     <div class="print-container">
         @php
             // Helper function to calculate average
-            $calculateAverage = function($functions) {
+            $calculateAverage = function ($functions) {
                 $sum = 0;
                 $count = 0;
                 foreach ($functions as $f) {
@@ -261,10 +271,10 @@
             };
 
             // Helper to group functions by Output
-            $groupByOutput = function($functions) {
+            $groupByOutput = function ($functions) {
                 $grouped = [];
                 foreach ($functions as $f) {
-                    $key = $f->output; 
+                    $key = $f->output;
                     if (!isset($grouped[$key])) {
                         $grouped[$key] = [];
                     }
@@ -285,10 +295,11 @@
             $groupedCore = $groupByOutput($ipcr->coreFunctions);
             $groupedSupport = $groupByOutput($ipcr->supportFunctions);
             $groupedStrategic = $groupByOutput($ipcr->strategicFunctions);
-            
+
             $isAccomplishmentPhase = !in_array($ipcr->status, ['Draft Target', 'Target Submitted', 'Target Approved']);
         @endphp
 
+        <div class="annex">Annex E</div>
         <div class="content-wrapper">
             <!-- Watermark -->
             <div class="watermark">Page 1</div>
@@ -296,13 +307,15 @@
             <!-- Header Section -->
             <table>
                 <tr class="header-row">
-                    <td rowspan="3" class="form-label no-border-right no-border-bottom" style="width: 15%; vertical-align: top;">
+                    <td rowspan="3" class="form-label no-border-right no-border-bottom"
+                        style="width: 15%; vertical-align: top;">
                         DOH-SPMS Form 4
                     </td>
                     <td rowspan="3" class="logo-cell no-border-left no-border-bottom" style="width: 50%;">
                         <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
                             <img src="{{ asset('img/img_csmc.jpg') }}" alt="CSMC Logo">
-                            <span class="title-text" style="text-align: center;">INDIVIDUAL PERFORMANCE COMMITMENT AND REVIEW (IPCR)</span>
+                            <span class="title-text" style="text-align: center;">INDIVIDUAL PERFORMANCE COMMITMENT AND
+                                REVIEW (IPCR)</span>
                             <img src="{{ asset('img/img_doh.png') }}" alt="DOH Logo">
                         </div>
                     </td>
@@ -323,10 +336,20 @@
             <table>
                 <tr>
                     <td colspan="8" class="commitment-text no-border-top">
-                        I, <span class="underline bold">{{ strtoupper($ipcr->user->name ?? 'N/A') }}</span>, 
-                        <span class="underline bold">{{ $ipcr->user->designation_name ?? '' }}</span> of the 
-                        <span class="underline bold">{{ $ipcr->user->section_name ?? '' }}</span> of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period 
-                        <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('F j') }} to {{ \Carbon\Carbon::parse($ipcr->period_to)->format('F j, Y') }}</span>.
+                        I, <span class="underline bold">
+                            {{ strtoupper(trim(
+    ($ipcr->user->fname ?? '') . ' ' .
+    (!empty($ipcr->user->mname) ? substr($ipcr->user->mname, 0, 1) . '. ' : '') .
+    ($ipcr->user->lname ?? '') .
+    (!empty($ipcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+)) }}
+                        </span>,
+                        <span class="underline bold">{{ $ipcr->user->designation_name ?? '' }}</span> of the
+                        <span class="underline bold">{{  $ipcr->user->division_name }} - {{  $ipcr->user->section_name }}[{{ $ipcr->user->section_acronym ?? '' }}]</span> of the Cebu South
+                        Medical Center, commit to deliver and agree to be rated on the attainment of the following
+                        targets in accordance with the indicated measures for the period
+                        <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('F j') }} to
+                            {{ \Carbon\Carbon::parse($ipcr->period_to)->format('F j, Y') }}</span>.
                     </td>
                 </tr>
             </table>
@@ -335,10 +358,17 @@
             <table>
                 <tr>
                     <td colspan="5" class="employee-info no-border-top">
-                        Name of Employee: <span style="margin-left: 50px;"><strong>{{ strtoupper($ipcr->user->name ?? 'N/A') }}</strong></span>
+                        Name of Employee: <span
+                            style="margin-left: 20px;padding-right:27px"><strong>{{ strtoupper(trim(
+    ($ipcr->user->fname ?? '') . ' ' .
+    (!empty($ipcr->user->mname) ? substr($ipcr->user->mname, 0, 1) . '. ' : '') .
+    ($ipcr->user->lname ?? '') .
+    (!empty($ipcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+)) }}</strong></span>
                     </td>
                     <td colspan="3" class="no-border-top">
-                        Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
+                        Date: <span
+                            style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
                     </td>
                 </tr>
                 <tr>
@@ -346,12 +376,20 @@
                         <strong>Approved By:</strong>
                     </td>
                     <td colspan="3">
-                        Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('m/d/Y') : 'Date Created' }}</strong></span>
+                        Date: <span
+                            style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="5" class="center no-border-top">
-                        <strong>{{ strtoupper($ipcr->supervisor->name ?? 'N/A') }}</strong>
+                        <strong>
+                            {{ strtoupper(trim(
+    ($ipcr->supervisor->fname ?? '') . ' ' .
+    (!empty($ipcr->supervisor->mname) ? substr($ipcr->supervisor->mname, 0, 1) . '. ' : '') .
+    ($ipcr->supervisor->lname ?? '') .
+    (!empty($ipcr->supervisor->suffix) ? ' ' . $ipcr->supervisor->suffix : '')
+)) }}
+                        </strong>
                     </td>
                     <td colspan="3" rowspan="2"></td>
                 </tr>
@@ -368,10 +406,12 @@
                 <thead>
                     <tr class="column-header">
                         <td rowspan="2" style="width: 12%; vertical-align: middle;">Output</td>
-                        <td rowspan="2" style="width: 28%; vertical-align: middle;">Success Indicator (Targets + Measure)</td>
+                        <td rowspan="2" style="width: 28%; vertical-align: middle;">Success Indicator (Targets +
+                            Measure)</td>
                         <td rowspan="2" style="width: 12%; vertical-align: middle;">Actual Accomplishment</td>
                         <td colspan="4" style="width: 20%;">RATING</td>
-                        <td rowspan="2" style="width: 13%; vertical-align: middle;">Remarks/ Justification of Unmet Targets</td>
+                        <td rowspan="2" style="width: 13%; vertical-align: middle;">Remarks/ Justification of Unmet
+                            Targets</td>
                     </tr>
                     <tr class="column-header">
                         <td style="width: 5%;">Q (1)</td>
@@ -388,24 +428,25 @@
                     </tr>
                     @foreach($groupedCore as $output => $functions)
                         @foreach($functions as $index => $func)
-                        <tr style="page-break-inside: avoid;">
-                            @if($index === 0)
-                                <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">{{ $output }}</td>
-                            @endif
-                            <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">
-                                @php
-                                    $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
-                                    $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
-                                @endphp
-                                {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
-                            </td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
-                        </tr>
+                            <tr style="page-break-inside: avoid;">
+                                @if($index === 0)
+                                    <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">
+                                        {{ $output }}</td>
+                                @endif
+                                <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">
+                                    @php
+                                        $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
+                                        $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
+                                    @endphp
+                                    {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
+                                </td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
+                            </tr>
                         @endforeach
                     @endforeach
                     <tr class="average-row">
@@ -422,24 +463,25 @@
                     </tr>
                     @foreach($groupedSupport as $output => $functions)
                         @foreach($functions as $index => $func)
-                        <tr style="page-break-inside: avoid;">
-                            @if($index === 0)
-                                <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">{{ $output }}</td>
-                            @endif
-                            <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">
-                                @php
-                                    $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
-                                    $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
-                                @endphp
-                                {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
-                            </td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
-                        </tr>
+                            <tr style="page-break-inside: avoid;">
+                                @if($index === 0)
+                                    <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">
+                                        {{ $output }}</td>
+                                @endif
+                                <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">
+                                    @php
+                                        $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
+                                        $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
+                                    @endphp
+                                    {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
+                                </td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
+                            </tr>
                         @endforeach
                     @endforeach
                     <tr class="average-row">
@@ -456,24 +498,25 @@
                     </tr>
                     @foreach($groupedStrategic as $output => $functions)
                         @foreach($functions as $index => $func)
-                        <tr style="page-break-inside: avoid;">
-                            @if($index === 0)
-                                <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">{{ $output }}</td>
-                            @endif
-                            <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
-                            <td class="center" style="vertical-align: middle;">
-                                @php
-                                    $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
-                                    $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
-                                @endphp
-                                {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
-                            </td>
-                            <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
-                        </tr>
+                            <tr style="page-break-inside: avoid;">
+                                @if($index === 0)
+                                    <td rowspan="{{ count($functions) }}" class="center" style="vertical-align: middle;">
+                                        {{ $output }}</td>
+                                @endif
+                                <td style="text-align: left; vertical-align: middle;">{{ $func->success_indicator }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->actual_accomplishment }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->quantity_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->efficiency_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->timeliness_rating ?? '' }}</td>
+                                <td class="center" style="vertical-align: middle;">
+                                    @php
+                                        $ratings = array_filter([$func->quantity_rating, $func->efficiency_rating, $func->timeliness_rating]);
+                                        $avg = count($ratings) > 0 ? array_sum($ratings) / count($ratings) : 0;
+                                    @endphp
+                                    {{ $func->average_rating ?? ($avg > 0 ? number_format($avg, 2) : '') }}
+                                </td>
+                                <td class="center" style="vertical-align: middle;">{{ $func->remarks }}</td>
+                            </tr>
                         @endforeach
                     @endforeach
                     <tr class="average-row">
@@ -501,22 +544,22 @@
                     <td>50%</td>
                     <td>
                         @if($isAccomplishmentPhase)
-                         {{ number_format($coreAvg, 2) }}
-                         @endif
+                            {{ number_format($coreAvg, 2) }}
+                        @endif
                     </td>
                     <td colspan="2">
                         @if($isAccomplishmentPhase)
-                             {{ number_format($weightedCore, 2) }}
+                            {{ number_format($weightedCore, 2) }}
                         @endif
                     </td>
                     <td rowspan="3" style="vertical-align: middle;" class="bold">
                         @if($isAccomplishmentPhase)
-                         {{ number_format($finalScore, 2) }}
+                            {{ number_format($finalScore, 2) }}
                         @endif
                     </td>
                     <td rowspan="3" style="vertical-align: middle;" class="bold">
                         @if($isAccomplishmentPhase)
-                         {{ $ipcr->final_rating_adjective ?? '' }}
+                            {{ $ipcr->final_rating_adjective ?? '' }}
                         @endif
                     </td>
                     <td rowspan="3"></td>
@@ -526,12 +569,12 @@
                     <td>10%</td>
                     <td>
                         @if($isAccomplishmentPhase)
-                         {{ number_format($supportAvg, 2) }}
+                            {{ number_format($supportAvg, 2) }}
                         @endif
                     </td>
                     <td colspan="2">
                         @if($isAccomplishmentPhase)
-                         {{ number_format($weightedSupport, 2) }}
+                            {{ number_format($weightedSupport, 2) }}
                         @endif
                     </td>
                 </tr>
@@ -540,12 +583,12 @@
                     <td>40%</td>
                     <td>
                         @if($isAccomplishmentPhase)
-                         {{ number_format($strategicAvg, 2) }}
+                            {{ number_format($strategicAvg, 2) }}
                         @endif
                     </td>
                     <td colspan="2">
                         @if($isAccomplishmentPhase)
-                         {{ number_format($weightedStrategic, 2) }}
+                            {{ number_format($weightedStrategic, 2) }}
                         @endif
                     </td>
                 </tr>
@@ -553,7 +596,8 @@
                 <!-- Comments Section -->
                 <tr>
                     <td colspan="8" style="min-height: 40px; vertical-align: top; padding: 5px;">
-                        <span class="bold">Comments and Recommendations for Development Purposes:</span> {{ $ipcr->comments }}
+                        <span class="bold">Comments and Recommendations for Development Purposes:</span>
+                        {{ $ipcr->comments }}
                     </td>
                 </tr>
 
@@ -566,23 +610,44 @@
                     <td>Date</td>
                 </tr>
                 <tr class="center">
-                    <td class="signature-space">
+                    <td>
                         I certify that I discussed my assessment of the performance with the employee
                     </td>
                     <td rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>{{ strtoupper($ipcr->supervisor->name ?? '') }}</u></strong><br>
+                        <strong><u>
+                             {{ strtoupper(trim(
+    ($ipcr->supervisor->fname ?? '') . ' ' .
+    (!empty($ipcr->supervisor->mname) ? substr($ipcr->supervisor->mname, 0, 1) . '. ' : '') .
+    ($ipcr->supervisor->lname ?? '') .
+    (!empty($ipcr->supervisor->suffix) ? ' ' . $ipcr->supervisor->suffix : '')
+)) }}
+                        </strong><br>
                         <span class="small-text">Supervisor</span>
                     </td>
                     <td rowspan="2"></td>
                     <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>{{ strtoupper($ipcr->divisionHead->name ?? '') }}</u></strong><br>
+                        <strong><u>
+                            {{ strtoupper(trim(
+    ($ipcr->divisionHead->fname ?? '') . ' ' .
+    (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
+    ($ipcr->divisionHead->lname ?? '') .
+    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '')
+)) }}
+                        </u></strong><br>
                         <span class="small-text">Next Higher Supervisor</span>
                     </td>
                     <td rowspan="2"></td>
                 </tr>
                 <tr class="center">
-                    <td style="padding-top: 0;">
-                        <strong><u>{{ strtoupper($ipcr->user->name ?? '') }}</u></strong><br>
+                    <td class="signature-space">
+                        <strong><u>
+                            {{ strtoupper(trim(
+    ($ipcr->user->fname ?? '') . ' ' .
+    (!empty($ipcr->user->mname) ? substr($ipcr->user->mname, 0, 1) . '. ' : '') .
+    ($ipcr->user->lname ?? '') .
+    (!empty($ipcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+)) }}
+                        </u></strong><br>
                         <span class="small-text">Employee</span>
                     </td>
                 </tr>
@@ -590,7 +655,9 @@
                 <!-- Legend -->
                 <tr>
                     <td colspan="8" class="small-text italic">
-                        <strong>Legend:</strong> 1- Quality 2 -Efficiency 3 - Timeliness 4 - Average; *In the event that there is no strategic output, the percentage distribution is as follows: Core output- 50% and Support output-20%
+                        <strong>Legend:</strong> 1- Quality 2 -Efficiency 3 - Timeliness 4 - Average; *In the event that
+                        there is no strategic output, the percentage distribution is as follows: Core output- 50% and
+                        Support output-20%
                     </td>
                 </tr>
             </table>
@@ -604,10 +671,11 @@
 
     <script>
         // Auto-focus for printing
-        window.onload = function() {
+        window.onload = function () {
             // Optional: Auto-print on load (uncomment if desired)
             // window.print();
         };
     </script>
 </body>
+
 </html>

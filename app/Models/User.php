@@ -77,6 +77,17 @@ class User extends Authenticatable
         } catch (\Exception $e) { return ''; }
     }
 
+      public function getSectionAcronymAttribute()
+    {
+        if (!$this->section) return '';
+        try {
+            return \Illuminate\Support\Facades\DB::connection('user')
+                ->table('section')
+                ->where('id', $this->section)
+                ->value('code') ?? '';
+        } catch (\Exception $e) { return ''; }
+    }
+
     public function getDivisionNameAttribute()
     {
         if (!$this->division) return '';

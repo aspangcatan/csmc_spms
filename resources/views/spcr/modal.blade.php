@@ -531,7 +531,7 @@
                     if (canApprove) {
                         $('#handleSaveBtn').hide();
                         $('#approveBtn').show();
-                    } else if (['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(spcr.status)) {
+                    } else if (['Draft Target', 'Target Submitted', 'Target Approved', 'Draft Accomplishment'].includes(spcr.status)) {
                         $('#handleSaveBtn').show();
                         $('#approveBtn').hide();
                     } else {
@@ -565,9 +565,9 @@
     }
 
     function toggleSemesterFields(status) {
-        const isTargetDraft = status === 'Draft Target';
+        const isTargetDraft = ['Draft Target', 'Target Submitted'].includes(status);
         const isAccompDraft = ['Target Approved', 'Draft Accomplishment'].includes(status);
-        const isReadOnly = ['Target Submitted', 'Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
+        const isReadOnly = ['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
 
         const settingInputs = $('.output-field, .indicator-field, .accountability-field');
         const evaluationInputs = $('.accomplishment-field, .acc-rate-field, .remarks-field');
@@ -605,6 +605,8 @@
         const btnText = $('#saveBtnText');
         if (status === 'Draft Target') {
             btnText.text('Submit Target');
+        } else if (status === 'Target Submitted') {
+            btnText.text('Save Changes');
         } else if (status === 'Target Approved' || status === 'Draft Accomplishment') {
             btnText.text('Submit Accomplishment');
         }
