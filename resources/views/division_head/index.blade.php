@@ -28,13 +28,24 @@
     </div>
 
     <div class="card-modern overflow-hidden border-0 bg-white">
-        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">IPCR Queue</h2>
+            @if($pendingIpcrs->count() > 0)
+            <button id="bulkApproveBtn" onclick="bulkApproveIpcrs()"
+                    class="hidden px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm items-center gap-2">
+                <i class="fas fa-check-double"></i>
+                Bulk Approve (<span id="selectedCount">0</span>)
+            </button>
+            @endif
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead>
                     <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
+                        <th class="px-6 py-4 w-10">
+                            <input type="checkbox" id="selectAll"
+                                   class="w-4 h-4 rounded border-gray-300 text-emerald-500 cursor-pointer focus:ring-emerald-400">
+                        </th>
                         <th class="px-6 py-4">Employee</th>
                         <th class="px-6 py-4">Section</th>
                         <th class="px-6 py-4">Period</th>
@@ -45,6 +56,10 @@
                 <tbody class="divide-y divide-gray-50">
                     @forelse($pendingIpcrs as $ipcr)
                         <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" name="ipcr_ids[]" value="{{ $ipcr->id }}"
+                                       class="ipcr-checkbox w-4 h-4 rounded border-gray-300 text-emerald-500 cursor-pointer focus:ring-emerald-400">
+                            </td>
                             <td class="px-6 py-4">
                                 <p class="text-sm font-bold text-gray-900">{{ $ipcr->user->name ?? 'Unknown User' }}</p>
                                 <p class="text-[10px] text-gray-400 font-medium">{{ $ipcr->user->designation_name ?? '' }}</p>
@@ -77,7 +92,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-16 text-center">
+                            <td colspan="6" class="px-6 py-16 text-center">
                                 <p class="text-sm font-bold text-gray-500">No IPCR records awaiting Division Head approval.</p>
                             </td>
                         </tr>
@@ -93,21 +108,47 @@
 <script>
     window.ipcrApiBaseUrl = window.ipcrApiBaseUrl || @json(url('/api/ipcr'));
 
-    function postWithCsrf(url) {
+    // ── Checkbox selection ────────────────────────────────────────────────────
+
+    function updateBulkBtn() {
+        const count = $('.ipcr-checkbox:checked').length;
+        $('#selectedCount').text(count);
+        count > 0 ? $('#bulkApproveBtn').removeClass('hidden').addClass('flex')
+                  : $('#bulkApproveBtn').addClass('hidden').removeClass('flex');
+    }
+
+    $('#selectAll').on('change', function () {
+        $('.ipcr-checkbox').prop('checked', this.checked);
+        updateBulkBtn();
+    });
+
+    $(document).on('change', '.ipcr-checkbox', function () {
+        const total   = $('.ipcr-checkbox').length;
+        const checked = $('.ipcr-checkbox:checked').length;
+        $('#selectAll').prop('indeterminate', checked > 0 && checked < total);
+        $('#selectAll').prop('checked', checked === total);
+        updateBulkBtn();
+    });
+
+    // ── Fetch helper ──────────────────────────────────────────────────────────
+
+    function postWithCsrf(url, body = null) {
         return fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                'Accept': 'application/json'
-            }
+                'Accept': 'application/json',
+                ...(body ? { 'Content-Type': 'application/json' } : {})
+            },
+            ...(body ? { body: JSON.stringify(body) } : {})
         }).then(async (res) => {
             const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                throw new Error(data.message || 'Request failed.');
-            }
+            if (!res.ok) throw new Error(data.message || 'Request failed.');
             return data;
         });
     }
+
+    // ── Individual approve ────────────────────────────────────────────────────
 
     function approveIpcrAsDivisionHead(id) {
         confirmAction(
@@ -116,8 +157,28 @@
             'APPROVE',
             () => {
                 postWithCsrf(`${window.ipcrApiBaseUrl}/${id}/approve`)
-                    .then(() => {
-                        toast('IPCR approved successfully.');
+                    .then(() => { toast('IPCR approved successfully.'); window.location.reload(); })
+                    .catch((err) => showAlert('Error', err.message, 'error'));
+            }
+        );
+    }
+
+    // ── Bulk approve ──────────────────────────────────────────────────────────
+
+    function bulkApproveIpcrs() {
+        const ids = $('.ipcr-checkbox:checked').map(function () { return parseInt($(this).val()); }).get();
+        if (!ids.length) return;
+
+        confirmAction(
+            'Bulk Approve IPCR?',
+            `This will perform Division Head approval for ${ids.length} selected IPCR record(s). This cannot be undone.`,
+            'APPROVE ALL',
+            () => {
+                postWithCsrf(`${window.ipcrApiBaseUrl}/bulk-approve`, { ids })
+                    .then((data) => {
+                        const msg = `${data.approved.length} approved` +
+                                    (data.failed.length ? `, ${data.failed.length} failed.` : '.');
+                        toast(msg);
                         window.location.reload();
                     })
                     .catch((err) => showAlert('Error', err.message, 'error'));
@@ -125,10 +186,10 @@
         );
     }
 
+    // ── Year filter ───────────────────────────────────────────────────────────
+
     $('#yearFilter').on('change', function () {
-        const year = $(this).val();
-        window.location.href = `{{ route('division_head.approvals') }}?year=${year}`;
+        window.location.href = `{{ route('division_head.approvals') }}?year=${$(this).val()}`;
     });
 </script>
 @endpush
-

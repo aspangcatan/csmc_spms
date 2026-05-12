@@ -266,11 +266,7 @@ class SpcrService
         if ($spcr->status === 'Target Submitted' || $spcr->status === 'Accomplishment Submitted') {
             if ($spcr->supervisor_id != $userId) throw new \Exception("Only Supervisor can approve this stage.");
         } elseif ($spcr->status === 'Supervisor Approved') {
-            if ($spcr->division_head_id != $userId) throw new \Exception("Only Division Head can approve this stage.");
-        } elseif ($spcr->status === 'Division Head Approved') {
-            if ($spcr->highest_supervisor && $spcr->highest_supervisor != $userId && !$isPmtUser) {
-                throw new \Exception("Only PMT can approve this stage.");
-            }
+            if (!$isPmtUser) throw new \Exception("Only PMT can approve this stage.");
         }
 
         $oldStatus = $spcr->status;
@@ -281,8 +277,6 @@ class SpcrService
         } elseif ($oldStatus === 'Accomplishment Submitted') {
             $newStatus = 'Supervisor Approved';
         } elseif ($oldStatus === 'Supervisor Approved') {
-            $newStatus = 'Division Head Approved';
-        } elseif ($oldStatus === 'Division Head Approved') {
             $newStatus = 'PMT Approved';
             $spcr->pmt_id = $userId;
         }
@@ -359,7 +353,8 @@ class SpcrService
         }
 
         $divisionFilter = $filters['division'] ?? null;
-        $sectionFilter = $filters['section'] ?? null;
+        $sectionFilter  = $filters['section'] ?? null;
+        $statusFilter   = $filters['status'] ?? null;
         $isAdmin = $user->hasAdminAccessRight();
         $sectionHeadIds = DB::connection('user')->table('section')
             ->whereNotNull('head')
@@ -422,6 +417,14 @@ class SpcrService
             }
 
             $staffQuery->whereIn('id', $staffIds);
+        }
+
+        // Pre-filter by SPCR status so pagination reflects the filtered set
+        if ($statusFilter) {
+            $matchingIds = Spcr::where('year', $year)
+                ->where('status', $statusFilter)
+                ->pluck('userid');
+            $staffQuery->whereIn('id', $matchingIds);
         }
 
         $staffQuery->orderBy('lname')->orderBy('fname');

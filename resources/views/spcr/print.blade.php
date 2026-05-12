@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>SPCR Form - Print</title>
@@ -14,6 +15,7 @@
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
+
             .no-print {
                 display: none !important;
             }
@@ -47,7 +49,8 @@
             margin-bottom: 0;
         }
 
-        td, th {
+        td,
+        th {
             border: 1px solid #000;
             padding: 2px 4px;
             vertical-align: top;
@@ -219,9 +222,10 @@
         }
     </style>
 </head>
+
 <body>
     <button class="print-button no-print" onclick="window.print()">Print SPCR</button>
-    
+
     <div class="print-container">
         @php
             $year = (int) $spcr->year;
@@ -234,7 +238,8 @@
                 : ($spcr->semester == 1 ? "June {$year}" : "December {$year}");
 
             $spcrDateDisplay = $spcr->spcr_date ? \Carbon\Carbon::parse($spcr->spcr_date)->format('F j, Y') : '';
-            
+            $spcrDateDoneDisplay = $spcr->date_done ? \Carbon\Carbon::parse($spcr->date_done)->format('F j, Y') : '';
+
 
             $coreEntries = $spcr->entries->where('category', 'core')->values();
             $supportEntries = $spcr->entries->where('category', 'support')->values();
@@ -288,17 +293,21 @@
 
             <table>
                 <tr>
-                    <td colspan="15" class="commitment-text no-border-top">
+                    <td colspan="15" class="commitment-text no-border-top no-border-bottom">
                         I, <strong><span class="underline">
-                              {{ strtoupper(trim(
+                                {{ strtoupper(trim(
     ($spcr->user->fname ?? '') . ' ' .
     (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
     ($spcr->user->lname ?? '') .
-    (!empty($spcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
+    (!empty($spcr->user->suffix) ? ' ' . $spcr->user->suffix : '')
 )) }}
-</span></strong>,
+                            </span></strong>,
                         <span class="underline bold">{{ $spcr->user->designation_name ?? 'Position' }}</span>,
-                        of the <span class="underline bold">{{  $spcr->user->division_name }} - {{  $spcr->user->section_name }}[{{ $spcr->user->section_acronym ?? '' }}]</span>, of the Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the following targets in accordance with the indicated measures for the period
+                        of the <span class="underline bold">{{  $spcr->user->division_name }} (
+                            {{  $spcr->user->division_acronym }}) -
+                            {{  $spcr->user->section_name }}[{{ $spcr->user->section_acronym ?? '' }}]</span>, of the
+                        Cebu South Medical Center, commit to deliver and agree to be rated on the attainment of the
+                        following targets in accordance with the indicated measures for the period
                         <span class="underline bold">{{ $periodFrom }} to {{ $periodTo }}</span>.
                     </td>
                 </tr>
@@ -306,41 +315,54 @@
 
             <table>
                 <tr style="height: 36px;">
-                    <td colspan="6" class="text-right" style="vertical-align: middle; border-top: none; border-right: none;">
-                        <strong>Name of Section Chief:</strong>
+                    <td colspan="6" class="text-right"
+                        style="vertical-align: middle; border-top: none; border-right: none;">
+                        <div style="margin-top:15px">
+                            <strong>Name of Section Chief:</strong>
+                        </div>
                     </td>
-                    <td colspan="7" class="center" style="vertical-align: middle; border-top: none; border-left: none; border-right: none;">
-                        <strong><u>
-                          {{ strtoupper(trim(
+                    <td colspan="7" class="center"
+                        style="vertical-align: middle; border-top: none; border-left: none; border-right: none;">
+                        <div style="margin-top:15px">
+                            <strong><u>
+                                    {{ strtoupper(trim(
     ($spcr->user->fname ?? '') . ' ' .
     (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
     ($spcr->user->lname ?? '') .
-    (!empty($spcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
-)) }}    
-                        </u></strong>
+    (!empty($spcr->user->suffix) ? ' ' . $spcr->user->suffix : '')
+)) }}
+                                </u></strong>
+                        </div>
                     </td>
-                    <td colspan="2" class="text-start" style="vertical-align: middle; border-top: none; border-left: none;">
-                        <strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $spcrDateDisplay }}</strong></span>
+                    <td colspan="2" class="text-start"
+                        style="vertical-align: middle; border-top: none; border-left: none;">
+                        <div style="margin-top: 15px">
+                            <strong>Date:</strong> <span
+                                style="margin-left: 6px;"><strong>{{ $spcrDateDisplay }}</strong></span>
+                        </div>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="13" class="no-border-bottom"><strong>Approved By:</strong></td>
-                    <td colspan="2"><strong>Date:</strong> <span style="margin-left: 6px;"><strong>{{ $spcrDateDisplay }}</strong></span></td>
+                    <td colspan="2"><strong>Date:</strong> </td>
                 </tr>
                 <tr>
                     <td colspan="13" class="center no-border-top"><strong><u>
-                        {{ strtoupper(trim(
+                                {{ strtoupper(trim(
     ($spcr->supervisor->fname ?? '') . ' ' .
     (!empty($spcr->supervisor->mname) ? substr($spcr->supervisor->mname, 0, 1) . '. ' : '') .
     ($spcr->supervisor->lname ?? '') .
-    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '')
-)) }}        
-                    </u></strong></td>
-                    <td colspan="2" rowspan="2" class="center bold" style="vertical-align: middle">{{ $spcrDateDisplay }}</td>
+    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '') .
+    (!empty($spcr->supervisor->title) ? ', ' . $spcr->supervisor->title : '')
+)) }}
+                            </u></strong></td>
+                    <td colspan="2" rowspan="2" class="bold" style="vertical-align: middle">
+                        <div style="margin-left:20px">{{ $spcrDateDisplay }}</div>
+                    </td>
                 </tr>
                 <tr>
                     <td colspan="13" class="center"><strong>Name of Supervisor</strong></td>
-                    
+
                 </tr>
             </table>
 
@@ -391,11 +413,15 @@
                             <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong></td>
+                            <td class="center">
+                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            </td>
                             <td colspan="2">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="15" class="center">No core function records</td></tr>
+                        <tr>
+                            <td colspan="15" class="center">No core function records</td>
+                        </tr>
                     @endforelse
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Core Functions)</td>
@@ -419,11 +445,15 @@
                             <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong></td>
+                            <td class="center">
+                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            </td>
                             <td colspan="2">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="15" class="center">No support function records</td></tr>
+                        <tr>
+                            <td colspan="15" class="center">No support function records</td>
+                        </tr>
                     @endforelse
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Support Functions)</td>
@@ -447,11 +477,15 @@
                             <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
                             <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong></td>
+                            <td class="center">
+                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            </td>
                             <td colspan="2">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="15" class="center">No strategic function records</td></tr>
+                        <tr>
+                            <td colspan="15" class="center">No strategic function records</td>
+                        </tr>
                     @endforelse
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Strategic Functions)</td>
@@ -478,7 +512,9 @@
                     <td colspan="2">{{ rtrim(rtrim(number_format($coreWeight, 2), '0'), '.') }}</td>
                     <td colspan="2">{{ number_format($coreAvg, 2) }}</td>
                     <td colspan="4">{{ number_format($coreFinal, 2) }}</td>
-                    <td colspan="2" rowspan="3" style="vertical-align: middle;" class="bold">{{ number_format($finalAverage, 2) }}</td>
+                    <td colspan="2" rowspan="3" style="vertical-align: middle;" class="bold">
+                        {{ number_format($finalAverage, 2) }}
+                    </td>
                     <td colspan="2" rowspan="3" style="vertical-align: middle;" class="bold">{{ $finalAdjective }}</td>
                     <td colspan="2" rowspan="3"></td>
                 </tr>
@@ -504,15 +540,17 @@
                 <tr class="center">
                     <td colspan="5" rowspan="2" style="height: 68px; vertical-align: bottom; padding-bottom: 8px;">
                         <strong><u>
-                             {{ strtoupper(trim(
+                                {{ strtoupper(trim(
     ($spcr->user->fname ?? '') . ' ' .
     (!empty($spcr->user->mname) ? substr($spcr->user->mname, 0, 1) . '. ' : '') .
     ($spcr->user->lname ?? '') .
     (!empty($spcr->user->suffix) ? ' ' . $spcr->user->suffix : '')
-)) }}        
-                        </u></strong>
+)) }}
+                            </u></strong>
                     </td>
-                    <td colspan="3" rowspan="2"></td>
+                     <td colspan="3" rowspan="2" style="text-align: center; vertical-align: middle;">
+                        <strong>{{ $spcrDateDoneDisplay }}</strong>
+                    </td>
                     <td colspan="5" class="medium-text center" style="height: 20px;">
                         I certify that I discussed my assessment of the performance with the employee
                     </td>
@@ -521,15 +559,18 @@
                 <tr>
                     <td colspan="5" style="vertical-align: bottom; padding-bottom: 8px;" class="center">
                         <strong><u>
-                               {{ strtoupper(trim(
+                                {{ strtoupper(trim(
     ($spcr->supervisor->fname ?? '') . ' ' .
     (!empty($spcr->supervisor->mname) ? substr($spcr->supervisor->mname, 0, 1) . '. ' : '') .
     ($spcr->supervisor->lname ?? '') .
-    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '')
-)) }}        
-                        </u></strong>
+    (!empty($spcr->supervisor->suffix) ? ' ' . $spcr->supervisor->suffix : '') .
+    (!empty($spcr->supervisor->title) ? ', ' . $spcr->supervisor->title : '')
+)) }}
+                            </u></strong>
                     </td>
-                    <td colspan="2"></td>
+                    <td colspan="2" style="text-align: center; vertical-align: middle;">
+                        <strong>{{ $spcrDateDoneDisplay }}</strong>
+                    </td>
                 </tr>
                 <tr>
                     <td colspan="5" class="bold center">Employee</td>
@@ -539,7 +580,9 @@
                 </tr>
                 <tr>
                     <td colspan="15" class="small-text" style="font-style: italic;">
-                        Legend: 1 - Quality 2 - Efficiency 3 - Timeliness 4 - Average; *In the event that there is no strategic output, the percentage distribution is as follows: Core output - 80% and Support output - 20%.
+                        Legend: 1 - Quality 2 - Efficiency 3 - Timeliness 4 - Average; *In the event that there is no
+                        strategic output, the percentage distribution is as follows: Core output - 80% and Support
+                        output - 20%.
                     </td>
                 </tr>
                 {{-- END OF TODO --}}
@@ -551,4 +594,5 @@
         </div>
     </div>
 </body>
+
 </html>

@@ -43,12 +43,16 @@
                             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Employee Performance Tracking System</p>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4">
-                            <div>
-                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Revision Date</label>
+                            <div id="ipcrDateWrapper">
+                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Created</label>
+                                <input type="date" id="ipcrDate" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                            </div>
+                            <div id="dateDoneWrapper" class="hidden">
+                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Accomplished</label>
                                 <input type="date" id="dateDone" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
                             </div>
                             <div class="h-8 w-px bg-gray-200"></div>
-                            <div class="text-right">
+                            <div class="text-right hidden">
                                 <p class="text-[9px] text-gray-400 uppercase font-black mb-0.5 tracking-widest">Document ID</p>
                                 <p class="text-xs font-bold text-gray-900" id="displayIpcrId">NEW_DOCUMENT</p>
                             </div>
@@ -231,7 +235,8 @@
                 $('#ipcrSemester').val(window.currentCreatingSemester);
                 $('#ipcrYear').val(window.currentCreatingYear);
                 $('#ipcrId').val('');
-                $('#dateDone').val(new Date().toISOString().split('T')[0]);
+                $('#ipcrDate').val(new Date().toISOString().split('T')[0]);
+                $('#dateDone').val('');
                 
                 const semesterText = window.currentCreatingSemester == 1 ? '1st Semester - Target Setting' : '2nd Semester - Accomplishment';
                 $('#modalTitle').text(`IPCR ${window.currentCreatingYear} - ${semesterText}`);
@@ -410,11 +415,12 @@
         
         let payload = {
             ipcr: {
-                userid: window.authUserId,
+                userid: window.ipcrOwnerUserId || window.authUserId,
                 period_from: semester === 1 ? `${year}-01-01` : `${year}-07-01`,
                 period_to: semester === 1 ? `${year}-06-30` : `${year}-12-31`,
                 year: year,
                 semester: semester,
+                ipcr_date: $('#ipcrDate').val(),
                 date_done: $('#dateDone').val(),
                 status: $('#statusValue').val() || "Draft Target",
                 core_percentage_distribution: 50,
@@ -574,15 +580,20 @@
                 $('#displayIpcrId').text(ipcr.id || 'NEW_DOCUMENT');
                 $('#ipcrSemester').val(ipcr.semester || 1);
                 $('#ipcrYear').val(ipcr.year || new Date().getFullYear());
-                
+
+                $('#ipcrDate').val(ipcr.ipcr_date || '');
                 $('#dateDone').val(ipcr.date_done || '');
-                
+
                 // Update modal title
                 const semesterText = ipcr.semester == 1 ? '1st Semester' : '2nd Semester';
                 $('#modalTitle').text(`IPCR ${ipcr.year || ''} - ${semesterText}`);
-                
+
+                // Store original owner for payload use
+                window.ipcrOwnerUserId = ipcr.userid;
+
                 // Toggle fields and status
-                const isOwner = (ipcr.userid == authUserId);
+                // Staff edit mode grants supervisors the same field access as the owner
+                const isOwner = (ipcr.userid == authUserId) || window.isStaffEditMode;
                 updateStatusIndicator(ipcr.status);
                 updateButtonText(ipcr.status);
 
@@ -634,9 +645,12 @@
                     }
                 }
                 
-                // Disable save button if not owner and not in editable status
+                // Show save button for owner or staff edit mode (supervisors editing on behalf)
                 const isEditableByOwner = ['Draft Target', 'Target Submitted', 'Target Approved', 'Draft Accomplishment'].includes(ipcr.status);
-                if (ipcr.userid != authUserId || !isEditableByOwner) {
+                if (window.isStaffEditMode && ipcr.status !== 'PMT Approved') {
+                    $('#handleSaveBtn').show();
+                    $('#saveBtnText').text('Save Changes').show();
+                } else if (ipcr.userid != authUserId || !isEditableByOwner) {
                     $('#handleSaveBtn').hide();
                 } else {
                     $('#handleSaveBtn').show();
@@ -648,6 +662,11 @@
     }
 
     function toggleSemesterFields(status, isOwner = true) {
+        // Show the correct date field based on phase
+        const isAccomplishmentPhase = !['Draft Target', 'Target Submitted'].includes(status);
+        $('#ipcrDateWrapper').toggle(!isAccomplishmentPhase);
+        $('#dateDoneWrapper').toggle(isAccomplishmentPhase);
+
         // Always ensure all columns are visible
         $('.accomplishment-col, .rating-col, .remarks-col').show();
         $('.accomplishment-field, .rating-field, .remarks-field').show();
@@ -681,22 +700,18 @@
         const targetContainers = $('.accomplishment-field, .rating-field, .remarks-field');
         const targetInputs = targetContainers.find('input, textarea, select');
         
-        if (isReadOnly) {
-            // Check if we can still approve (supervisor case)
-            const ipcrId = $('#ipcrId').val();
-            // We'll rely on loadIPCR's canApprove logic for the comments field specifically
-            // but we disable table inputs globally for read-only
+        // For regular owners, lock everything once submitted; staff editors bypass this
+        if (isReadOnly && !window.isStaffEditMode) {
             $('#ipcrModal table input, #ipcrModal table textarea, #ipcrModal table select').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
             return;
         }
 
         if (status === 'Draft Target' || status === 'Target Submitted') {
-            // Can edit targets, but strictly not accomplishments or ratings
+            // Can edit targets, but not accomplishments or ratings
             settingInputs.prop('disabled', false).removeClass('bg-gray-100 cursor-not-allowed');
-            // We use a broader selector to ensure all evaluation fields are locked
             $('.accomplishment-field textarea, .rating-field input, .remarks-field textarea').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
-        } else if (status === 'Target Approved' || status === 'Draft Accomplishment') {
-            // Targets are LOCKED, but can edit accomplishments
+        } else if (status === 'Target Approved' || status === 'Draft Accomplishment' || isReadOnly) {
+            // Accomplishment phase (including submitted/approved): lock targets, allow accomplishment editing
             settingInputs.prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
             targetInputs.prop('disabled', false).removeClass('bg-gray-100 cursor-not-allowed');
         }
@@ -737,6 +752,7 @@
         }
 
         const currentIndex = statuses.indexOf(currentStatus);
+        const isApproved = currentStatus.includes('Approved');
 
         $('.status-step').each(function (index) {
             const circle = $(this).find('.status-circle');
@@ -748,7 +764,10 @@
             label.removeClass('text-orange-600 text-emerald-600 text-gray-400 font-black opacity-100');
             line.addClass('hidden');
 
-            if (index < currentIndex || currentStatus === 'PMT Approved') {
+            // Approved statuses mean the current step is already done — render it green too
+            const isCurrentCompleted = isApproved && index === currentIndex;
+
+            if (index < currentIndex || isCurrentCompleted || currentStatus === 'PMT Approved') {
                 // Completed
                 circle.addClass('bg-emerald-500 border-emerald-500 text-white').html('<i class="fas fa-check text-[10px]"></i>');
                 label.addClass('text-emerald-600 font-bold opacity-100');
@@ -756,7 +775,7 @@
                     line.removeClass('hidden');
                 }
             } else if (index === currentIndex) {
-                // Current
+                // Current in-progress (Draft / Submitted states)
                 circle.addClass('bg-orange-500 border-orange-500 text-white scale-110 shadow-lg shadow-orange-500/20');
                 label.addClass('text-orange-600 font-black opacity-100');
             } else {

@@ -19,28 +19,6 @@ class IpcrController extends Controller
     {
         $this->ipcrService = $ipcrService;
         $this->spcrService = $spcrService;
-
-        $this->middleware(function ($request, $next) {
-            $user = auth()->user();
-            if ($user && $user->isSectionHead()) {
-                $allowedForSectionHead = [
-                    'dashboard',
-                    'staff',
-                    'show',
-                    'printIpcr',
-                    'getLogs',
-                    'getPending',
-                    'approve',
-                ];
-
-                $actionMethod = optional($request->route())->getActionMethod();
-                if (!in_array($actionMethod, $allowedForSectionHead, true)) {
-                    abort(403, 'Unauthorized. Section Heads cannot create or manage personal IPCR documents.');
-                }
-            }
-
-            return $next($request);
-        });
     }
 
     public function index()
@@ -165,12 +143,36 @@ class IpcrController extends Controller
         $this->sanitizeAndValidateFunctionGroups($validated);
 
         $ipcrObj = \App\Models\Ipcr::findOrFail($id);
-        if ($ipcrObj->userid != auth()->id()) {
-            return response()->json(['message' => 'Unauthorized. Only the creator can update this record.'], 403);
+        $authUser = auth()->user();
+        if ($ipcrObj->userid != auth()->id() && !$authUser->canAccessStaffIpcr()) {
+            return response()->json(['message' => 'Unauthorized. Only the creator or a supervisor can update this record.'], 403);
         }
 
         $ipcr = $this->ipcrService->updateIpcr($id, $validated);
         return response()->json($ipcr);
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $userId = auth()->id();
+        $approved = [];
+        $failed   = [];
+
+        foreach ($request->ids as $id) {
+            try {
+                $this->ipcrService->approveIpcr($id, $userId, null);
+                $approved[] = $id;
+            } catch (\Exception $e) {
+                $failed[] = ['id' => $id, 'reason' => $e->getMessage()];
+            }
+        }
+
+        return response()->json(['approved' => $approved, 'failed' => $failed]);
     }
 
     public function destroy($id)
@@ -321,15 +323,17 @@ class IpcrController extends Controller
             abort(403, 'Unauthorized access. You do not have permission to view staff IPCR records.');
         }
 
-        $year = $request->query('year', date('Y'));
+        $year     = $request->query('year', date('Y'));
         $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
         $division = $request->query('division');
-        $section = $request->query('section');
-        $perPage = 10;
+        $section  = $request->query('section');
+        $status   = $request->query('status');
+        $perPage  = 10;
 
         $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year, $semester, [
             'division' => $division,
-            'section' => $section,
+            'section'  => $section,
+            'status'   => $status,
         ], $perPage);
 
         $divisions = DB::connection('user')
@@ -345,7 +349,7 @@ class IpcrController extends Controller
             ->orderBy('description')
             ->get(['id', 'description', 'division']);
         
-        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section'));
+        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section', 'status'));
     }
 
     public function getPending(Request $request)

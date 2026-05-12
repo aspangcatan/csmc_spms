@@ -18,18 +18,13 @@ class PmtApprovalController extends Controller
         $year = $request->query('year', date('Y'));
 
         $pendingIpcrs = Ipcr::with('user')
-            ->where('highest_supervisor', $userId)
             ->where('status', 'Division Head Approved')
             ->where('year', $year)
             ->orderBy('updated_at', 'desc')
             ->get();
 
         $pendingSpcrs = Spcr::with('user')
-            ->where('status', 'Division Head Approved')
-            ->where(function ($query) use ($userId) {
-                $query->where('highest_supervisor', $userId)
-                      ->orWhereNull('highest_supervisor');
-            })
+            ->where('status', 'Supervisor Approved')
             ->where('year', $year)
             ->orderBy('updated_at', 'desc')
             ->get();

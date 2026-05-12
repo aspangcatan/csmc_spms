@@ -33,10 +33,6 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/ipcr', function () {
-        if (auth()->user()->isSectionHead()) {
-            abort(403, 'Unauthorized. Section Heads cannot access the IPCR module.');
-        }
-
         return view('ipcr.index');
     });
 
@@ -54,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [IpcrController::class, 'store']);
         Route::get('/pending', [IpcrController::class, 'getPending']);
         Route::get('/by-semester', [IpcrController::class, 'getByYearSemester']);
+        Route::post('/bulk-approve', [IpcrController::class, 'bulkApprove']);
         Route::post('/{id}/approve', [IpcrController::class, 'approve']);
         Route::post('/{id}/submit', [IpcrController::class, 'submit']);
         Route::get('/{id}', [IpcrController::class, 'show']);
@@ -76,6 +73,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}', [\App\Http\Controllers\SpcrController::class, 'show']);
         Route::get('/{id}/logs', [\App\Http\Controllers\SpcrController::class, 'getLogs']);
         Route::put('/{id}', [\App\Http\Controllers\SpcrController::class, 'update']);
+        Route::post('/bulk-approve', [\App\Http\Controllers\SpcrController::class, 'bulkApprove']);
         Route::post('/{id}/submit', [\App\Http\Controllers\SpcrController::class, 'submit']);
         Route::post('/{id}/approve', [\App\Http\Controllers\SpcrController::class, 'approve']);
         Route::delete('/{id}', [\App\Http\Controllers\SpcrController::class, 'destroy']);

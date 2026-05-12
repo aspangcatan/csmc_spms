@@ -48,6 +48,19 @@
                     </select>
                 </div>
                 <div class="h-8 w-px bg-gray-100"></div>
+                <div>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Status</p>
+                    <select id="statusFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
+                        <option value="">All</option>
+                        @php
+                            $statuses = ['Draft Target','Target Submitted','Target Approved','Draft Accomplishment','Accomplishment Submitted','Supervisor Approved','Division Head Approved','PMT Approved'];
+                        @endphp
+                        @foreach($statuses as $s)
+                            <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>{{ $s }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="h-8 w-px bg-gray-100"></div>
                 <div class="text-right">
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total Records</p>
                     <p class="text-sm font-black text-gray-900 leading-none">{{ $staffData->total() }}</p>
@@ -127,7 +140,12 @@
                             <td class="px-8 py-5 text-right">
                                 <div class="flex justify-end gap-2">
                                     @if($data['spcr'])
-                                        <button onclick="viewSpcr({{ $data['spcr']->id }})" 
+                                        <button onclick="editStaffSpcr({{ $data['spcr']->id }})"
+                                                class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-green-500 hover:border-green-100 transition-all shadow-sm"
+                                                title="Edit SPCR">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="viewStaffSpcr({{ $data['spcr']->id }})"
                                                 class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-100 transition-all shadow-sm"
                                                 title="View/Approve">
                                             <i class="fas fa-eye"></i>
@@ -180,7 +198,17 @@
     window.SPCR_CONTEXT = 'staff';
     const currentYear = {{ $year }};
     const currentSemester = {{ (date('n') <= 6 ? 1 : 2) }};
-    let currentSpcrId = null; 
+    let currentSpcrId = null;
+
+    function viewStaffSpcr(id) {
+        window.isSpcrStaffEditMode = false;
+        viewSpcr(id);
+    }
+
+    function editStaffSpcr(id) {
+        window.isSpcrStaffEditMode = true;
+        viewSpcr(id);
+    }
     
     $(document).ready(function() {
         // Search functionality
@@ -193,18 +221,20 @@
         });
 
         function applyFilters(resetSection = false) {
-            const year = $('#yearFilter').val();
+            const year     = $('#yearFilter').val();
             const division = $('#divisionFilter').val();
-            const section = resetSection ? '' : $('#sectionFilter').val();
-            const params = new URLSearchParams({ year });
+            const section  = resetSection ? '' : $('#sectionFilter').val();
+            const status   = $('#statusFilter').val();
+            const params   = new URLSearchParams({ year });
 
             if (division) params.set('division', division);
-            if (section) params.set('section', section);
+            if (section)  params.set('section', section);
+            if (status)   params.set('status', status);
 
             window.location.href = `{{ route('spcr.staff') }}?${params.toString()}`;
         }
 
-        $('#yearFilter').on('change', function() {
+        $('#yearFilter, #statusFilter').on('change', function() {
             applyFilters(false);
         });
 

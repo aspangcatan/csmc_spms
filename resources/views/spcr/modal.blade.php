@@ -43,17 +43,19 @@
                             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Division Performance Tracking System</p>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4">
-                            <div>
-                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">SPCR Date</label>
+                            <div id="spcrDateWrapper">
+                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Created</label>
                                 <input type="date" id="spcrDate" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
                             </div>
-                            <div class="h-8 w-px bg-gray-200"></div>
-                            <div>
+                            <div id="spcrDateDoneWrapper" class="hidden">
+                                <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Accomplished</label>
+                                <input type="date" id="spcrDateDone" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                            </div>
+                            <div class="hidden">
                                 <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Division Head</label>
                                 <p class="text-xs font-bold text-gray-900" id="raterName">{{ Auth::user()->name }}</p>
                             </div>
-                            <div class="h-8 w-px bg-gray-200"></div>
-                            <div class="text-right">
+                            <div class="text-right hidden">
                                 <p class="text-[9px] text-gray-400 uppercase font-black mb-0.5 tracking-widest">Document ID</p>
                                 <p class="text-xs font-bold text-gray-900" id="displaySpcrId">NEW_DOCUMENT</p>
                             </div>
@@ -230,6 +232,7 @@
         currentSpcrId = null;
         $('#spcrId').val('');
         $('#spcrDate').val(new Date().toISOString().split('T')[0]);
+        $('#spcrDateDone').val('');
         $('#displaySpcrId').text('NEW_DOCUMENT');
         $('#modalTitle').text(`CREATE SPCR ${currentYear} - ${currentSemester == 1 ? '1st' : '2nd'} Sem`);
         
@@ -353,6 +356,7 @@
             year: currentYear,
             semester: currentSemester,
             spcr_date: $('#spcrDate').val(),
+            date_done: $('#spcrDateDone').val(),
             status: targetStatus,
             core_entries: coreEntries,
             support_entries: supportEntries,
@@ -493,6 +497,7 @@
             .then(spcr => {
                 $('#spcrId').val(spcr.id);
                 $('#spcrDate').val(spcr.spcr_date || '');
+                $('#spcrDateDone').val(spcr.date_done || '');
                 $('#displaySpcrId').text(`SPCR-${String(spcr.id).padStart(5, '0')}`);
                 $('#modalTitle').text(`SPCR ${spcr.year} - ${spcr.semester == 1 ? '1st' : '2nd'} Semester`);
                 $('#raterName').text(spcr.division_head?.name || '---');
@@ -515,13 +520,17 @@
                 if (spcr.status === 'Target Submitted' || spcr.status === 'Accomplishment Submitted') {
                     canApprove = isSupervisor;
                 } else if (spcr.status === 'Supervisor Approved') {
-                    canApprove = isDivHead;
-                } else if (spcr.status === 'Division Head Approved') {
                     canApprove = isPmt;
                 }
 
                 if (isStaffReviewMode()) {
-                    $('#handleSaveBtn').hide();
+                    const isEditableByStaff = spcr.status !== 'PMT Approved';
+                    if (window.isSpcrStaffEditMode && isEditableByStaff) {
+                        $('#handleSaveBtn').show();
+                        $('#saveBtnText').text('Save Changes');
+                    } else {
+                        $('#handleSaveBtn').hide();
+                    }
                     if (canApprove) {
                         $('#approveBtn').show();
                     } else {
@@ -565,15 +574,18 @@
     }
 
     function toggleSemesterFields(status) {
-        const isTargetDraft = ['Draft Target', 'Target Submitted'].includes(status);
-        const isAccompDraft = ['Target Approved', 'Draft Accomplishment'].includes(status);
-        const isReadOnly = ['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
+        const isTargetDraft  = ['Draft Target', 'Target Submitted'].includes(status);
+        const isAccompDraft  = ['Target Approved', 'Draft Accomplishment'].includes(status);
+        const isReadOnly     = ['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
 
-        const settingInputs = $('.output-field, .indicator-field, .accountability-field');
+        // Show the correct date field based on phase
+        $('#spcrDateWrapper').toggle(isTargetDraft);
+        $('#spcrDateDoneWrapper').toggle(!isTargetDraft);
+
+        const settingInputs    = $('.output-field, .indicator-field, .accountability-field');
         const evaluationInputs = $('.accomplishment-field, .acc-rate-field, .remarks-field');
-        const ratingInputs = $('.q-rating, .e-rating, .t-rating');
-        const bulkRowInputs = $('.bulk-row-input');
-        const spcrDateInput = $('#spcrDate');
+        const ratingInputs     = $('.q-rating, .e-rating, .t-rating');
+        const bulkRowInputs    = $('.bulk-row-input');
 
         // Reset all
         $('#spcrModal textarea, #spcrModal input').prop('disabled', true).addClass('bg-gray-50/50 cursor-not-allowed');
@@ -582,17 +594,21 @@
         if (isTargetDraft) {
             settingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
-            spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            $('#spcrDate').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             $('.delete-row-btn, .add-row-btn').show();
-        } else if (isAccompDraft) {
+        } else if (isAccompDraft || (isReadOnly && window.isSpcrStaffEditMode)) {
+            // Accomplishment phase, or staff editor bypassing read-only lock
             evaluationInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
-            spcrDateInput.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
-            if (!isStaffReviewMode()) {
+            $('#spcrDateDone').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            if (!isStaffReviewMode() || window.isSpcrStaffEditMode) {
                 ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             }
+            if (window.isSpcrStaffEditMode) {
+                $('.delete-row-btn, .add-row-btn').show();
+            }
         } else if (isReadOnly) {
-            // Check if user is approver for the current stage to allow rating
+            // Standard approver: allow rating input at applicable stages
             const currentStatus = $('#statusValue').val();
             if (['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved'].includes(currentStatus)) {
                 ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
@@ -653,6 +669,7 @@
         confirmAction(confirmMsg, 'Are you sure you want to approve this SPCR stage?', 'APPROVE', () => {
             const payload = {
                 spcr_date: $('#spcrDate').val(),
+                date_done: $('#spcrDateDone').val(),
                 core_entries: coreEntries,
                 support_entries: supportEntries,
                 strategic_entries: strategicEntries,
@@ -720,6 +737,7 @@
         ];
         $('#statusValue').val(currentStatus);
         const currentIndex = statuses.indexOf(currentStatus);
+        const isApproved = currentStatus.includes('Approved');
 
         $('.status-step').each(function (index) {
             const circle = $(this).find('.status-circle');
@@ -730,11 +748,17 @@
             label.removeClass('text-orange-600 text-emerald-600 text-gray-400 font-black opacity-100');
             line.addClass('hidden');
 
-            if (index < currentIndex || (currentStatus === 'PMT Approved' && index <= currentIndex)) {
+            // Approved statuses mean the current step is already done — render it green
+            const isCurrentCompleted = isApproved && index === currentIndex;
+
+            if (index < currentIndex || isCurrentCompleted || currentStatus === 'PMT Approved') {
                 circle.addClass('bg-emerald-500 border-emerald-500 text-white').html('<i class="fas fa-check text-[10px]"></i>');
                 label.addClass('text-emerald-600 font-bold opacity-100');
-                if (index < statuses.length - 1) line.removeClass('hidden');
+                if (index < currentIndex || (currentStatus === 'PMT Approved' && index < statuses.length - 1)) {
+                    line.removeClass('hidden');
+                }
             } else if (index === currentIndex) {
+                // Current in-progress (Draft / Submitted states)
                 circle.addClass('bg-orange-500 border-orange-500 text-white scale-110 shadow-lg shadow-orange-500/20').text(index + 1);
                 label.addClass('text-orange-600 font-black opacity-100');
             } else {

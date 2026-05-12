@@ -94,6 +94,29 @@ class SpcrController extends Controller
         }
     }
 
+    public function bulkApprove(Request $request)
+    {
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer',
+        ]);
+
+        $userId = auth()->id();
+        $approved = [];
+        $failed   = [];
+
+        foreach ($request->ids as $id) {
+            try {
+                $this->spcrService->approveSpcr($id, $userId);
+                $approved[] = $id;
+            } catch (\Exception $e) {
+                $failed[] = ['id' => $id, 'reason' => $e->getMessage()];
+            }
+        }
+
+        return response()->json(['approved' => $approved, 'failed' => $failed]);
+    }
+
     public function destroy($id)
     {
         try {
@@ -128,14 +151,16 @@ class SpcrController extends Controller
             abort(403, 'Unauthorized access. You do not have permission to view staff SPCR records.');
         }
 
-        $year = $request->query('year', date('Y'));
+        $year     = $request->query('year', date('Y'));
         $division = $request->query('division');
-        $section = $request->query('section');
-        $perPage = 10;
+        $section  = $request->query('section');
+        $status   = $request->query('status');
+        $perPage  = 10;
 
         $staffData = $this->spcrService->getStaffStatusList(auth()->id(), $year, null, [
             'division' => $division,
-            'section' => $section,
+            'section'  => $section,
+            'status'   => $status,
         ], $perPage);
 
         $divisions = DB::connection('user')
@@ -151,7 +176,7 @@ class SpcrController extends Controller
             ->orderBy('description')
             ->get(['id', 'description', 'division']);
         
-        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section'));
+        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section', 'status'));
     }
 
     public function print($id)

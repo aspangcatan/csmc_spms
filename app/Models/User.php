@@ -30,6 +30,7 @@ class User extends Authenticatable
         'division',
         'designation',
         'picture',
+        'title'
     ];
 
     protected $appends = [
@@ -97,6 +98,39 @@ class User extends Authenticatable
                 ->where('id', $this->division)
                 ->value('description') ?? '';
         } catch (\Exception $e) { return ''; }
+    }
+
+          public function getDivisionAcronymAttribute()
+    {
+        if (!$this->section) return '';
+        try {
+            return \Illuminate\Support\Facades\DB::connection('user')
+                ->table('division')
+                ->where('id', $this->division)
+                ->value('code') ?? '';
+        } catch (\Exception $e) { return ''; }
+    }
+
+    public function getHighestSupervisor(): string
+    {
+        try {
+            $user = \Illuminate\Support\Facades\DB::connection('user')
+                ->table('users')
+                ->where('id', 35)
+                ->first(['fname', 'mname', 'lname', 'suffix', 'title']);
+
+            if (!$user) return '';
+
+            return trim(
+                ($user->fname ?? '') . ' ' .
+                (!empty($user->mname) ? substr($user->mname, 0, 1) . '. ' : '') .
+                ($user->lname ?? '') .
+                (!empty($user->suffix) ? ' ' . $user->suffix : '') .
+                (!empty($user->title) ? ', ' . $user->title : '')
+            );
+        } catch (\Exception $e) {
+            return '';
+        }
     }
 
     public function isSupervisor()

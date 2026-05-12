@@ -56,6 +56,19 @@
                     </select>
                 </div>
                 <div class="h-8 w-px bg-gray-100"></div>
+                <div>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Status</p>
+                    <select id="statusFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
+                        <option value="">All</option>
+                        @php
+                            $statuses = ['Draft Target','Target Submitted','Target Approved','Draft Accomplishment','Accomplishment Submitted','Supervisor Approved','Division Head Approved','PMT Approved'];
+                        @endphp
+                        @foreach($statuses as $s)
+                            <option value="{{ $s }}" {{ $status === $s ? 'selected' : '' }}>{{ $s }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="h-8 w-px bg-gray-100"></div>
                 <div class="text-right">
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Total Staff</p>
                     <p class="text-sm font-black text-gray-900 leading-none">{{ $staffData->total() }}</p>
@@ -134,12 +147,19 @@
                             <td class="px-8 py-5 text-right">
                                 <div class="flex justify-end gap-2">
                                     @if($data['ipcr'])
-                                        <button onclick="viewStaffIpcr({{ $data['ipcr']->id }})" 
-                                                class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-100 transition-all shadow-sm">
+                                        <button onclick="editStaffIpcr({{ $data['ipcr']->id }})"
+                                                class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-green-500 hover:border-green-100 transition-all shadow-sm"
+                                                title="Edit IPCR">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="viewStaffIpcr({{ $data['ipcr']->id }})"
+                                                class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-100 transition-all shadow-sm"
+                                                title="View IPCR">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <a href="{{ route('ipcr.print', $data['ipcr']->id) }}" target="_blank"
-                                           class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm">
+                                           class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm"
+                                           title="Print IPCR">
                                             <i class="fas fa-print"></i>
                                         </a>
                                     @else
@@ -195,22 +215,21 @@
 
         // Year + semester filter
         function applyFilters(resetSection = false) {
-            const year = $('#yearFilter').val();
+            const year     = $('#yearFilter').val();
             const semester = $('#semesterFilter').val();
             const division = $('#divisionFilter').val();
-            const section = resetSection ? '' : $('#sectionFilter').val();
-            const params = new URLSearchParams({
-                year: year,
-                semester: semester
-            });
+            const section  = resetSection ? '' : $('#sectionFilter').val();
+            const status   = $('#statusFilter').val();
+            const params   = new URLSearchParams({ year, semester });
 
             if (division) params.set('division', division);
-            if (section) params.set('section', section);
+            if (section)  params.set('section', section);
+            if (status)   params.set('status', status);
 
             window.location.href = `{{ route('ipcr.staff') }}?${params.toString()}`;
         }
 
-        $('#yearFilter, #semesterFilter').on('change', function() {
+        $('#yearFilter, #semesterFilter, #statusFilter').on('change', function() {
             applyFilters(false);
         });
 
@@ -225,7 +244,18 @@
 
     function viewStaffIpcr(id) {
         if (typeof loadIPCR === 'function') {
+            window.isStaffEditMode = false;
             window.ipcrModalMode = 'view';
+            loadIPCR(id);
+            $('#ipcrModal').modal('show');
+        } else {
+            showAlert('Loading Module', 'Please wait a moment for the IPCR module to initialize...', 'info');
+        }
+    }
+
+    function editStaffIpcr(id) {
+        if (typeof loadIPCR === 'function') {
+            window.isStaffEditMode = true;
             loadIPCR(id);
             $('#ipcrModal').modal('show');
         } else {

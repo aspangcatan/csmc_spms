@@ -225,19 +225,36 @@ class IpcrService
     protected function syncFunctions($relation, array $functionsData)
     {
         $functionsData = $this->filterFunctionRows($functionsData);
-        $existingIds = $relation->pluck('id')->toArray();
+
+        $parentKey  = $relation->getParentKey();
+        $foreignKey = $relation->getForeignKeyName();
+        $model      = $relation->getRelated();
+
+        $existingIds = $model->newQuery()
+            ->where($foreignKey, $parentKey)
+            ->pluck('id')
+            ->toArray();
+
         $receivedIds = array_filter(array_column($functionsData, 'id'));
 
-        // Delete rows not received
+        // Delete rows not in the incoming payload
         $idsToDelete = array_diff($existingIds, $receivedIds);
         if (!empty($idsToDelete)) {
-            $relation->whereIn('id', $idsToDelete)->delete();
+            $model->newQuery()
+                ->where($foreignKey, $parentKey)
+                ->whereIn('id', $idsToDelete)
+                ->delete();
         }
 
         foreach ($functionsData as $func) {
             $preparedData = $this->prepareFunctionData($func);
             if (!empty($func['id'])) {
-                $relation->where('id', $func['id'])->update($preparedData);
+                // Fresh query each iteration — avoids WHERE accumulation on the shared relation
+                $updateData = array_diff_key($preparedData, ['id' => null]);
+                $model->newQuery()
+                    ->where('id', $func['id'])
+                    ->where($foreignKey, $parentKey)
+                    ->update($updateData);
             } else {
                 $relation->create($preparedData);
             }
@@ -466,8 +483,9 @@ class IpcrService
             return [];
         }
 
-        $divisionId = $filters['division'] ?? null;
-        $sectionId = $filters['section'] ?? null;
+        $divisionId    = $filters['division'] ?? null;
+        $sectionId     = $filters['section'] ?? null;
+        $statusFilter  = $filters['status'] ?? null;
         $isAdmin = $actingUser->hasAdminAccessRight();
 
         $staffQuery = \App\Models\User::query()
@@ -516,6 +534,15 @@ class IpcrService
 
         if (!empty($sectionHeadIds)) {
             $staffQuery->whereNotIn('id', $sectionHeadIds);
+        }
+
+        // Pre-filter by IPCR status so pagination reflects the filtered set
+        if ($statusFilter) {
+            $matchingIds = Ipcr::where('year', $year)
+                ->when($semester, fn($q) => $q->where('semester', $semester))
+                ->where('status', $statusFilter)
+                ->pluck('userid');
+            $staffQuery->whereIn('id', $matchingIds);
         }
 
         $staffQuery->orderBy('lname')->orderBy('fname');

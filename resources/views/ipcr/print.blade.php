@@ -299,7 +299,7 @@
             $isAccomplishmentPhase = !in_array($ipcr->status, ['Draft Target', 'Target Submitted', 'Target Approved']);
         @endphp
 
-        <div class="annex">Annex E</div>
+        <div class="annex">Annex D</div>
         <div class="content-wrapper">
             <!-- Watermark -->
             <div class="watermark">Page 1</div>
@@ -335,7 +335,7 @@
             <!-- Commitment Statement -->
             <table>
                 <tr>
-                    <td colspan="8" class="commitment-text no-border-top">
+                    <td colspan="8" class="commitment-text no-border-top no-border-bottom">
                         I, <span class="underline bold">
                             {{ strtoupper(trim(
     ($ipcr->user->fname ?? '') . ' ' .
@@ -345,7 +345,7 @@
 )) }}
                         </span>,
                         <span class="underline bold">{{ $ipcr->user->designation_name ?? '' }}</span> of the
-                        <span class="underline bold">{{  $ipcr->user->division_name }} - {{  $ipcr->user->section_name }}[{{ $ipcr->user->section_acronym ?? '' }}]</span> of the Cebu South
+                        <span class="underline bold">{{  $ipcr->user->division_name }} ({{ $ipcr->user->division_acronym }})  - {{  $ipcr->user->section_name }}[{{ $ipcr->user->section_acronym ?? '' }}]</span> of the Cebu South
                         Medical Center, commit to deliver and agree to be rated on the attainment of the following
                         targets in accordance with the indicated measures for the period
                         <span class="underline bold">{{ \Carbon\Carbon::parse($ipcr->period_from)->format('F j') }} to
@@ -357,18 +357,21 @@
             <!-- Employee Info and Approval -->
             <table>
                 <tr>
-                    <td colspan="5" class="employee-info no-border-top">
-                        Name of Employee: <span
+                    <td colspan="5" class="employee-info no-border-top no-border-right">
+                        <div style="margin-top:15px">
+Name of Employee: <span
                             style="margin-left: 20px;padding-right:27px"><strong>{{ strtoupper(trim(
     ($ipcr->user->fname ?? '') . ' ' .
     (!empty($ipcr->user->mname) ? substr($ipcr->user->mname, 0, 1) . '. ' : '') .
     ($ipcr->user->lname ?? '') .
     (!empty($ipcr->user->suffix) ? ' ' . $ipcr->user->suffix : '')
 )) }}</strong></span>
+                        </div>   
                     </td>
-                    <td colspan="3" class="no-border-top">
-                        Date: <span
-                            style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
+                    <td colspan="3" class="no-border-top no-border-left">
+                        <div style="margin-top: 15px">
+                            Date: <span style="margin-left: 20px;"><strong>{{ $ipcr->ipcr_date ? \Carbon\Carbon::parse($ipcr->ipcr_date)->format('F j, Y') : '' }}</strong></span>
+                        </div>
                     </td>
                 </tr>
                 <tr>
@@ -376,22 +379,25 @@
                         <strong>Approved By:</strong>
                     </td>
                     <td colspan="3">
-                        Date: <span
-                            style="margin-left: 20px;"><strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong></span>
+                        Date: 
                     </td>
                 </tr>
                 <tr>
                     <td colspan="5" class="center no-border-top">
                         <strong>
                             {{ strtoupper(trim(
-    ($ipcr->supervisor->fname ?? '') . ' ' .
-    (!empty($ipcr->supervisor->mname) ? substr($ipcr->supervisor->mname, 0, 1) . '. ' : '') .
-    ($ipcr->supervisor->lname ?? '') .
-    (!empty($ipcr->supervisor->suffix) ? ' ' . $ipcr->supervisor->suffix : '')
+    ($ipcr->divisionHead->fname ?? '') . ' ' .
+    (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
+    ($ipcr->divisionHead->lname ?? '') .
+    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '') .
+    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '') 
 )) }}
                         </strong>
                     </td>
-                    <td colspan="3" rowspan="2"></td>
+                    <td colspan="3" rowspan="2">
+                        <div
+                            style="margin-left: 30px;margin-top:5px"><strong>{{ $ipcr->ipcr_date ? \Carbon\Carbon::parse($ipcr->ipcr_date)->format('F j, Y') : '' }}</strong></span>
+                    </td>
                 </tr>
                 <tr>
                     <td colspan="5" class="center">
@@ -615,28 +621,28 @@
                     </td>
                     <td rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
                         <strong><u>
-                             {{ strtoupper(trim(
-    ($ipcr->supervisor->fname ?? '') . ' ' .
-    (!empty($ipcr->supervisor->mname) ? substr($ipcr->supervisor->mname, 0, 1) . '. ' : '') .
-    ($ipcr->supervisor->lname ?? '') .
-    (!empty($ipcr->supervisor->suffix) ? ' ' . $ipcr->supervisor->suffix : '')
-)) }}
-                        </strong><br>
-                        <span class="small-text">Supervisor</span>
-                    </td>
-                    <td rowspan="2"></td>
-                    <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>
                             {{ strtoupper(trim(
     ($ipcr->divisionHead->fname ?? '') . ' ' .
     (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
     ($ipcr->divisionHead->lname ?? '') .
-    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '')
+    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '') .
+    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '')
 )) }}
+                        </u></strong><br>
+                        <span class="small-text">Supervisor</span>
+                    </td>
+                    <td rowspan="2" style="text-align: center; vertical-align: middle;">
+                        <strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong>
+                    </td>
+                    <td colspan="4" rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
+                        <strong><u>
+                            {{ strtoupper($ipcr->user->getHighestSupervisor()) }}
                         </u></strong><br>
                         <span class="small-text">Next Higher Supervisor</span>
                     </td>
-                    <td rowspan="2"></td>
+                    <td rowspan="2" style="text-align: center; vertical-align: middle;">
+                        <strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong>
+                    </td>
                 </tr>
                 <tr class="center">
                     <td class="signature-space">
