@@ -578,7 +578,7 @@
                     <td colspan="5" class="bold center">Supervisor</td>
                     <td colspan="2"></td>
                 </tr>
-                <tr>
+                <tr>    
                     <td colspan="15" class="small-text" style="font-style: italic;">
                         Legend: 1 - Quality 2 - Efficiency 3 - Timeliness 4 - Average; *In the event that there is no
                         strategic output, the percentage distribution is as follows: Core output - 80% and Support

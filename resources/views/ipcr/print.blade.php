@@ -603,7 +603,7 @@ Name of Employee: <span
                 <tr>
                     <td colspan="8" style="min-height: 40px; vertical-align: top; padding: 5px;">
                         <span class="bold">Comments and Recommendations for Development Purposes:</span>
-                        {{ $ipcr->comments }}
+                        <i><strong style="font-size: 12px">{{ $ipcr->comments }}</strong></i>
                     </td>
                 </tr>
 
