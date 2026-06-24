@@ -186,10 +186,10 @@ class SpcrService
 
     protected function getAdjectiveRating($score)
     {
-        if ($score >= 4.5) return 'Outstanding';
-        if ($score >= 3.5) return 'Very Satisfactory';
-        if ($score >= 2.5) return 'Satisfactory';
-        if ($score >= 1.5) return 'Unsatisfactory';
+        if ($score >= 5) return 'Outstanding';
+        if ($score >= 4) return 'Very Satisfactory';
+        if ($score >= 3) return 'Satisfactory';
+        if ($score >= 2) return 'Unsatisfactory';
         if ($score > 0) return 'Poor';
         return 'N/A';
     }

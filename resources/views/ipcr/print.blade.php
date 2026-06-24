@@ -117,7 +117,7 @@
         }
 
         .approval-section {
-            padding: 5px;
+            padding: 2px;
         }
 
         .center {
@@ -383,24 +383,24 @@ Name of Employee: <span
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="center no-border-top">
+                    <td colspan="5" class="center no-border-top" style="padding: 0px 4px;">
                         <strong>
                             {{ strtoupper(trim(
     ($ipcr->divisionHead->fname ?? '') . ' ' .
     (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
     ($ipcr->divisionHead->lname ?? '') .
     (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '') .
-    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '') 
+    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '')
 )) }}
                         </strong>
                     </td>
-                    <td colspan="3" rowspan="2">
+                    <td colspan="3" rowspan="2" style="padding: 2px 4px;">
                         <div
                             style="margin-left: 30px;margin-top:5px"><strong>{{ $ipcr->ipcr_date ? \Carbon\Carbon::parse($ipcr->ipcr_date)->format('F j, Y') : '' }}</strong></span>
                     </td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="center">
+                    <td colspan="5" class="center" style="padding: 1px 4px;">
                         <strong>Name of Supervisor</strong>
                     </td>
                 </tr>
@@ -616,20 +616,10 @@ Name of Employee: <span
                     <td>Date</td>
                 </tr>
                 <tr class="center">
-                    <td>
-                        I certify that I discussed my assessment of the performance with the employee
+                    <td style="border-bottom: 0px solid black !important;">
                     </td>
-                    <td rowspan="2" style="vertical-align: bottom; padding-bottom: 10px;">
-                        <strong><u>
-                            {{ strtoupper(trim(
-    ($ipcr->divisionHead->fname ?? '') . ' ' .
-    (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
-    ($ipcr->divisionHead->lname ?? '') .
-    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '') .
-    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '')
-)) }}
-                        </u></strong><br>
-                        <span class="small-text">Supervisor</span>
+                    <td style="vertical-align: bottom; padding-bottom: 4px;">
+                        I certify that I discussed my assessment of the performance with the employee
                     </td>
                     <td rowspan="2" style="text-align: center; vertical-align: middle;">
                         <strong>{{ $ipcr->date_done ? \Carbon\Carbon::parse($ipcr->date_done)->format('F j, Y') : '' }}</strong>
@@ -645,7 +635,7 @@ Name of Employee: <span
                     </td>
                 </tr>
                 <tr class="center">
-                    <td class="signature-space">
+                    <td class="signature-space" style="border-top: 0px solid black">
                         <strong><u>
                             {{ strtoupper(trim(
     ($ipcr->user->fname ?? '') . ' ' .
@@ -655,6 +645,18 @@ Name of Employee: <span
 )) }}
                         </u></strong><br>
                         <span class="small-text">Employee</span>
+                    </td>
+                    <td class="signature-space">
+                        <strong><u>
+                            {{ strtoupper(trim(
+    ($ipcr->divisionHead->fname ?? '') . ' ' .
+    (!empty($ipcr->divisionHead->mname) ? substr($ipcr->divisionHead->mname, 0, 1) . '. ' : '') .
+    ($ipcr->divisionHead->lname ?? '') .
+    (!empty($ipcr->divisionHead->suffix) ? ' ' . $ipcr->divisionHead->suffix : '') .
+    (!empty($ipcr->divisionHead->title) ? ', ' . $ipcr->divisionHead->title : '')
+)) }}
+                        </u></strong><br>
+                        <span class="small-text">Supervisor</span>
                     </td>
                 </tr>
 

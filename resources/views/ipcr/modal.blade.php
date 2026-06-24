@@ -301,8 +301,9 @@
 
             const ratings = [q, e, t].filter(v => v > 0);
             const average = ratings.length > 0 ? (ratings.reduce((a, b) => a + b) / ratings.length) : 0;
-            
-            row.find('.a-rating').val(average > 0 ? average.toFixed(2) : '0.0');
+
+            // Leave blank (not "0.0") when no rating was entered — the row may not be applicable for rating.
+            row.find('.a-rating').val(ratings.length > 0 ? average.toFixed(2) : '');
         });
     });
 
@@ -423,6 +424,7 @@
                 ipcr_date: $('#ipcrDate').val(),
                 date_done: $('#dateDone').val(),
                 status: $('#statusValue').val() || "Draft Target",
+                comments: $('#supervisor_comments').val(),
                 core_percentage_distribution: 50,
                 support_percentage_distribution: 10,
                 strategic_percentage_distribution: 40
