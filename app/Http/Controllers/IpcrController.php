@@ -100,6 +100,12 @@ class IpcrController extends Controller
 
     public function update(Request $request, $id)
     {
+        $ipcrObj = \App\Models\Ipcr::findOrFail($id);
+        $authUser = auth()->user();
+        if (!$authUser->canEditIpcr($ipcrObj)) {
+            return response()->json(['message' => 'Unauthorized. Only the creator or an assigned approver can update this record.'], 403);
+        }
+
         $validated = $request->validate([
             'ipcr.userid' => 'sometimes|integer',
             'ipcr.supervisor_id' => 'sometimes|nullable|integer',
@@ -149,12 +155,6 @@ class IpcrController extends Controller
             'strategic_functions.*.remarks' => 'nullable|string',
         ]);
         $this->sanitizeAndValidateFunctionGroups($validated);
-
-        $ipcrObj = \App\Models\Ipcr::findOrFail($id);
-        $authUser = auth()->user();
-        if (!$authUser->canEditIpcr($ipcrObj)) {
-            return response()->json(['message' => 'Unauthorized. Only the creator or an assigned approver can update this record.'], 403);
-        }
 
         if (isset($validated['ipcr'])) {
             // Ownership never changes through an update.
