@@ -147,11 +147,13 @@
                             <td class="px-8 py-5 text-right">
                                 <div class="flex justify-end gap-2">
                                     @if($data['ipcr'])
+                                        @if(auth()->user()->canEditIpcr($data['ipcr']))
                                         <button onclick="editStaffIpcr({{ $data['ipcr']->id }})"
                                                 class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-green-500 hover:border-green-100 transition-all shadow-sm"
                                                 title="Edit IPCR">
                                             <i class="fas fa-edit"></i>
                                         </button>
+                                        @endif
                                         <button onclick="viewStaffIpcr({{ $data['ipcr']->id }})"
                                                 class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-100 transition-all shadow-sm"
                                                 title="View IPCR">

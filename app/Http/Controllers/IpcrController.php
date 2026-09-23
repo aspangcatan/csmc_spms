@@ -23,7 +23,12 @@ class IpcrController extends Controller
 
     public function index()
     {
-        return response()->json($this->ipcrService->getAll());
+        $user = auth()->user();
+        if ($user->hasAdminAccessRight() || $user->isPmt()) {
+            return response()->json($this->ipcrService->getAll());
+        }
+
+        return response()->json(Ipcr::with(['user', 'coreFunctions', 'supportFunctions', 'strategicFunctions'])->where('userid', $user->id)->get());
     }
 
     public function store(Request $request)
@@ -75,6 +80,8 @@ class IpcrController extends Controller
             'strategic_functions.*.remarks' => 'nullable|string',
         ]);
         $this->sanitizeAndValidateFunctionGroups($validated);
+        // IPCRs are always created for the logged-in user.
+        $validated['ipcr']['userid'] = auth()->id();
 
         try {
             $ipcr = $this->ipcrService->createIpcrWithFunctions($validated);
@@ -87,6 +94,7 @@ class IpcrController extends Controller
 
     public function show($id)
     {
+        $this->authorizeIpcrView($id);
         return response()->json($this->ipcrService->getById($id));
     }
 
@@ -144,8 +152,21 @@ class IpcrController extends Controller
 
         $ipcrObj = \App\Models\Ipcr::findOrFail($id);
         $authUser = auth()->user();
-        if ($ipcrObj->userid != auth()->id() && !$authUser->canAccessStaffIpcr()) {
-            return response()->json(['message' => 'Unauthorized. Only the creator or a supervisor can update this record.'], 403);
+        if (!$authUser->canEditIpcr($ipcrObj)) {
+            return response()->json(['message' => 'Unauthorized. Only the creator or an assigned approver can update this record.'], 403);
+        }
+
+        if (isset($validated['ipcr'])) {
+            // Ownership never changes through an update.
+            $validated['ipcr']['userid'] = $ipcrObj->userid;
+
+            $newStatus = $validated['ipcr']['status'] ?? null;
+            if ($newStatus !== null && $newStatus !== $ipcrObj->status) {
+                $isOwner = (int) $ipcrObj->userid === (int) $authUser->id;
+                if (!$isOwner || !$this->isOwnerStatusTransition($ipcrObj->status, $newStatus)) {
+                    return response()->json(['message' => 'Unauthorized status change. Use the approval workflow.'], 403);
+                }
+            }
         }
 
         $ipcr = $this->ipcrService->updateIpcr($id, $validated);
@@ -187,6 +208,7 @@ class IpcrController extends Controller
 
     public function generatePDF($id)
     {
+        $this->authorizeIpcrView($id);
         $ipcr = $this->ipcrService->getById($id);
         $folioSize = [0, 0, 612.00, 936.00]; // 8.5in x 13in converted to points (1in = 72pt)
         $pdf = Pdf::loadView('ipcr.pdf', compact('ipcr'))
@@ -196,6 +218,7 @@ class IpcrController extends Controller
 
     public function printIpcr($id)
     {
+        $this->authorizeIpcrView($id);
         $ipcr = $this->ipcrService->getById($id);
         return view('ipcr.print', compact('ipcr'));
     }
@@ -354,7 +377,7 @@ class IpcrController extends Controller
 
     public function getPending(Request $request)
     {
-        $userId = $request->query('user_id') ?? auth()->id() ?? 1;
+        $userId = auth()->id();
         $year = $request->query('year');
         $semester = $request->query('semester');
 
@@ -363,7 +386,7 @@ class IpcrController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $userId = $request->query('user_id') ?? auth()->id() ?? 1;
+        $userId = auth()->id();
         $comments = $request->input('comments');
         try {
             $ipcr = $this->ipcrService->approveIpcr($id, $userId, $comments);
@@ -375,23 +398,30 @@ class IpcrController extends Controller
 
     public function submit(Request $request, $id)
     {
-        $userId = $request->query('user_id') ?? auth()->id() ?? 1;
+        $userId = auth()->id();
+        if ((int) \App\Models\Ipcr::findOrFail($id)->userid !== (int) $userId) {
+            return response()->json(['message' => 'Unauthorized. Only the creator can submit this record.'], 403);
+        }
         $ipcr = $this->ipcrService->submitIpcr($id, $userId);
         return response()->json($ipcr);
     }
 
     public function getByYearSemester(Request $request)
     {
-        $userId = $request->query('user_id', 1);
+        $userId = $request->query('user_id', auth()->id());
         $year = $request->query('year');
         $semester = $request->query('semester');
         
         $ipcr = $this->ipcrService->getByYearAndSemester($userId, $year, $semester);
+        if ($ipcr && !auth()->user()->canViewIpcr($ipcr)) {
+            abort(403, 'Unauthorized. You cannot view this IPCR.');
+        }
         return response()->json($ipcr);
     }
 
     public function getLogs($id)
     {
+        $this->authorizeIpcrView($id);
         $logs = $this->ipcrService->getIpcrLogs($id);
         return response()->json($logs);
     }
@@ -470,5 +500,12 @@ class IpcrController extends Controller
         }
 
         return true;
+    }
+
+    protected function authorizeIpcrView($id): void
+    {
+        if (!auth()->user()->canViewIpcr(\App\Models\Ipcr::findOrFail($id))) {
+            abort(403, 'Unauthorized. You cannot view this IPCR.');
+        }
     }
 }

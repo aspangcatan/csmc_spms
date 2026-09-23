@@ -6,6 +6,7 @@ use App\Services\SpcrService;
 use Illuminate\Http\Request;
 use App\Models\Spcr;
 use App\Models\SpcrEntry;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class SpcrController extends Controller
@@ -19,7 +20,7 @@ class SpcrController extends Controller
 
     public function index(Request $request)
     {
-        if (!auth()->user()->isSectionHead()) {
+        if (!auth()->user()->headsAnySection()) {
             abort(403, 'Unauthorized. Only Section Heads can access this module.');
         }
 
@@ -27,7 +28,7 @@ class SpcrController extends Controller
         $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
         $user = auth()->user();
         
-        $spcrs = Spcr::where('division_id', $user->division)
+        $spcrs = Spcr::where('userid', $user->id)
             ->where('year', $year)
             ->where('semester', $semester)
             ->with(['user', 'divisionHead'])
@@ -69,17 +70,38 @@ class SpcrController extends Controller
     public function show($id)
     {
         $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'pmt', 'logs.user'])->findOrFail($id);
+        $this->authorizeSpcrView($spcr);
         return response()->json($spcr);
     }
 
     public function update(Request $request, $id)
     {
-        $spcr = $this->spcrService->updateSpcr($id, $request->all());
+        $spcrObj = Spcr::findOrFail($id);
+        $authUser = auth()->user();
+        if (!$authUser->canEditSpcr($spcrObj)) {
+            return response()->json(['message' => 'Unauthorized. Only the creator or an assigned approver can update this record.'], 403);
+        }
+
+        // Ownership and signatories never change through an update.
+        $data = $request->except(['spcr', 'highest_supervisor']);
+
+        $newStatus = $data['status'] ?? null;
+        if ($newStatus !== null && $newStatus !== $spcrObj->status) {
+            $isOwner = (int) $spcrObj->userid === (int) $authUser->id;
+            if (!$isOwner || !$this->isOwnerStatusTransition($spcrObj->status, $newStatus)) {
+                return response()->json(['message' => 'Unauthorized status change. Use the approval workflow.'], 403);
+            }
+        }
+
+        $spcr = $this->spcrService->updateSpcr($id, $data);
         return response()->json($spcr);
     }
 
     public function submit($id)
     {
+        if ((int) Spcr::findOrFail($id)->userid !== (int) auth()->id()) {
+            return response()->json(['message' => 'Unauthorized. Only the creator can submit this record.'], 403);
+        }
         $spcr = $this->spcrService->submitSpcr($id, auth()->id());
         return response()->json($spcr);
     }
@@ -119,6 +141,10 @@ class SpcrController extends Controller
 
     public function destroy($id)
     {
+        if ((int) Spcr::findOrFail($id)->userid !== (int) auth()->id()) {
+            return response()->json(['message' => 'Unauthorized. Only the creator can delete this record.'], 403);
+        }
+
         try {
             $this->spcrService->deleteSpcr($id);
             return response()->json(['message' => 'Deleted successfully']);
@@ -129,16 +155,17 @@ class SpcrController extends Controller
 
     public function getByYearSemester(Request $request)
     {
-        $divisionId = auth()->user()->division;
         $year = $request->query('year');
         $semester = $request->query('semester');
         
-        $spcr = $this->spcrService->getByYearAndSemester($divisionId, $year, $semester);
+        // SPCRs are one per user, so load the logged-in user's own record.
+        $spcr = $this->spcrService->getByYearAndSemester(auth()->id(), $year, $semester);
         return response()->json($spcr);
     }
 
     public function getLogs($id)
     {
+        $this->authorizeSpcrView(Spcr::findOrFail($id));
         $logs = $this->spcrService->getSpcrLogs($id);
         return response()->json($logs);
     }
@@ -182,6 +209,7 @@ class SpcrController extends Controller
     public function print($id)
     {
         $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'highestSupervisor', 'pmt'])->findOrFail($id);
+        $this->authorizeSpcrView($spcr);
         $viewName = $this->resolveSpcrPrintView($spcr->userid);
         return view($viewName, compact('spcr'));
     }
@@ -189,27 +217,22 @@ class SpcrController extends Controller
     protected function resolveSpcrPrintView($creatorId): string
     {
         try {
-            $sectionsHeaded = DB::connection('user')
-                ->table('section')
-                ->where('head', $creatorId)
-                ->get(['subsection']);
+            $creator = User::find($creatorId);
 
-            if ($sectionsHeaded->isEmpty()) {
-                return 'spcr.print';
-            }
-
-            $isUnitHead = $sectionsHeaded->contains(function ($section) {
-                $subsection = isset($section->subsection) ? trim((string) $section->subsection) : '';
-                return $subsection !== '' && $subsection !== '0';
-            });
-
-            if ($isUnitHead) {
+            if ($creator && $creator->isUnitHead()) {
                 return 'spcr.print_subsection';
             }
 
             return 'spcr.print';
         } catch (\Exception $e) {
             return 'spcr.print';
+        }
+    }
+
+    protected function authorizeSpcrView(Spcr $spcr): void
+    {
+        if (!auth()->user()->canViewSpcr($spcr)) {
+            abort(403, 'Unauthorized. You cannot view this SPCR.');
         }
     }
 }

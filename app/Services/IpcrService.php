@@ -346,7 +346,14 @@ class IpcrService
         $oldStatus = $ipcr->status;
         $actingUser = \App\Models\User::find($userId);
         $isPmtUser = $actingUser ? $actingUser->isPmt() : false;
-        
+
+        // Only the assigned approver for the current stage may approve.
+        if ($ipcr->status === 'Target Submitted' || $ipcr->status === 'Accomplishment Submitted') {
+            if ($ipcr->supervisor_id != $userId) throw new \Exception("Only the Supervisor can approve this stage.");
+        } elseif ($ipcr->status === 'Supervisor Approved') {
+            if ($ipcr->division_head != $userId) throw new \Exception("Only the Division Head can approve this stage.");
+        }
+
         if ($ipcr->status === 'Target Submitted') {
             $ipcr->status = 'Target Approved';
         } elseif ($ipcr->status === 'Accomplishment Submitted') {
@@ -507,7 +514,31 @@ class IpcrService
                 ->pluck('id')
                 ->toArray();
 
-            $staffQuery->whereIn('section', $sections);
+            // Include child units so section heads also see unit staff.
+            if (!empty($sections)) {
+                $childUnitIds = DB::connection('user')
+                    ->table('section')
+                    ->whereIn('subsection', $sections)
+                    ->pluck('id')
+                    ->toArray();
+
+                $sections = array_values(array_unique(array_merge($sections, $childUnitIds)));
+            }
+
+            // Division heads see all staff within the divisions they head.
+            $headedDivisionIds = DB::connection('user')
+                ->table('division')
+                ->where('head', $userId)
+                ->pluck('id')
+                ->toArray();
+
+            $staffQuery->where(function ($query) use ($sections, $headedDivisionIds) {
+                $query->whereIn('section', $sections);
+
+                if (!empty($headedDivisionIds)) {
+                    $query->orWhereIn('division', $headedDivisionIds);
+                }
+            });
 
             // Exclude unit heads from Staff IPCR; they are handled in Staff SPCR.
             $unitHeadIds = DB::connection('user')->table('section')

@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::get('/', function () {
-    if (auth()->check() && auth()->user()->isSectionHead()) {
+    if (auth()->check() && auth()->user()->headsAnySection()) {
         return redirect('/spcr');
     }
 

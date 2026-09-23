@@ -314,14 +314,14 @@
             <span>Dashboard</span>
         </a>
 
-        @if(!auth()->user()->isSectionHead() && !auth()->user()->isDivisionHead())
+        @if(!auth()->user()->headsAnySection() && !auth()->user()->isDivisionHead())
         <a href="{{ url('/ipcr') }}" class="sidebar-item {{ Request::is('ipcr') ? 'active' : '' }}">
             <i class="far fa-file-alt"></i>
             <span>IPCR</span>
         </a>
         @endif
 
-        @if(auth()->user()->isSectionHead())
+        @if(auth()->user()->headsAnySection())
         <a href="{{ route('spcr.index') }}" class="sidebar-item {{ Request::is('spcr*') ? 'active' : '' }}">
             <i class="fas fa-sitemap"></i>
             <span>SPCR</span>

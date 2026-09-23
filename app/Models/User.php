@@ -139,9 +139,34 @@ class User extends Authenticatable
                \Illuminate\Support\Facades\DB::connection('user')->table('division')->where('head', $this->id)->exists();
     }
 
-    public function isSectionHead()
+    // Heads any section, whether a main section or a unit.
+    public function headsAnySection(): bool
     {
         return \Illuminate\Support\Facades\DB::connection('user')->table('section')->where('head', $this->id)->exists();
+    }
+
+    // Heads a main section (no parent section).
+    public function isSectionHead(): bool
+    {
+        return \Illuminate\Support\Facades\DB::connection('user')
+            ->table('section')
+            ->where('head', $this->id)
+            ->where(function ($query) {
+                $query->whereNull('subsection')
+                    ->orWhereIn('subsection', ['', '0']);
+            })
+            ->exists();
+    }
+
+    // Heads a unit (a section that has a parent section).
+    public function isUnitHead(): bool
+    {
+        return \Illuminate\Support\Facades\DB::connection('user')
+            ->table('section')
+            ->where('head', $this->id)
+            ->whereNotNull('subsection')
+            ->whereNotIn('subsection', ['', '0'])
+            ->exists();
     }
 
     public function isDivisionHead()
@@ -174,7 +199,69 @@ class User extends Authenticatable
 
     public function canAccessStaffIpcr(): bool
     {
-        return $this->hasAdminAccessRight() || $this->isSupervisor() || $this->isSectionHead();
+        return $this->hasAdminAccessRight() || $this->isSupervisor();
+    }
+
+    // True when $ownerId falls under this user's hierarchy:
+    // their division (division head) or their section and its child units (section/unit head).
+    public function managesUser($ownerId): bool
+    {
+        if ((int) $ownerId === (int) $this->id) {
+            return false;
+        }
+
+        $owner = self::find($ownerId);
+        if (!$owner) {
+            return false;
+        }
+
+        $db = \Illuminate\Support\Facades\DB::connection('user');
+
+        if ($owner->division && $db->table('division')->where('head', $this->id)->where('id', $owner->division)->exists()) {
+            return true;
+        }
+
+        $sectionIds = $db->table('section')->where('head', $this->id)->pluck('id')->toArray();
+        if (empty($sectionIds)) {
+            return false;
+        }
+
+        $sectionIds = array_merge($sectionIds, $db->table('section')->whereIn('subsection', $sectionIds)->pluck('id')->toArray());
+
+        return in_array($owner->section, $sectionIds);
+    }
+
+    public function canViewIpcr(Ipcr $ipcr): bool
+    {
+        return (int) $ipcr->userid === (int) $this->id
+            || $this->hasAdminAccessRight()
+            || $this->isPmt()
+            || in_array((int) $this->id, array_map('intval', [$ipcr->supervisor_id, $ipcr->division_head, $ipcr->highest_supervisor, $ipcr->pmt_id]), true)
+            || $this->managesUser($ipcr->userid);
+    }
+
+    // Editing is limited to the owner and the approvers assigned to the record.
+    public function canEditIpcr(Ipcr $ipcr): bool
+    {
+        return (int) $ipcr->userid === (int) $this->id
+            || $this->hasAdminAccessRight()
+            || in_array((int) $this->id, array_map('intval', [$ipcr->supervisor_id, $ipcr->division_head, $ipcr->highest_supervisor]), true);
+    }
+
+    public function canViewSpcr(Spcr $spcr): bool
+    {
+        return (int) $spcr->userid === (int) $this->id
+            || $this->hasAdminAccessRight()
+            || $this->isPmt()
+            || in_array((int) $this->id, array_map('intval', [$spcr->supervisor_id, $spcr->division_head_id, $spcr->highest_supervisor, $spcr->pmt_id]), true)
+            || $this->managesUser($spcr->userid);
+    }
+
+    public function canEditSpcr(Spcr $spcr): bool
+    {
+        return (int) $spcr->userid === (int) $this->id
+            || $this->hasAdminAccessRight()
+            || in_array((int) $this->id, array_map('intval', [$spcr->supervisor_id, $spcr->division_head_id, $spcr->highest_supervisor]), true);
     }
 
     public function hasAdminAccessRight(): bool

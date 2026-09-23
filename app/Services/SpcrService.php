@@ -302,9 +302,9 @@ class SpcrService
         return $spcr->delete();
     }
 
-    public function getByYearAndSemester($divisionId, $year, $semester)
+    public function getByYearAndSemester($userId, $year, $semester)
     {
-        return Spcr::where('division_id', $divisionId)
+        return Spcr::where('userid', $userId)
             ->where('year', $year)
             ->where('semester', $semester)
             ->with(['user', 'divisionHead'])
