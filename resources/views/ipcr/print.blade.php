@@ -616,8 +616,7 @@ Name of Employee: <span
                     <td>Date</td>
                 </tr>
                 <tr class="center">
-                    <td style="border-bottom: 0px solid black !important;">
-                    </td>
+                    <td style="border-bottom: 0px solid black !important;"></td>
                     <td style="vertical-align: bottom; padding-bottom: 4px;">
                         I certify that I discussed my assessment of the performance with the employee
                     </td>
@@ -659,7 +658,6 @@ Name of Employee: <span
                         <span class="small-text">Supervisor</span>
                     </td>
                 </tr>
-
                 <!-- Legend -->
                 <tr>
                     <td colspan="8" class="small-text italic">
@@ -669,7 +667,6 @@ Name of Employee: <span
                     </td>
                 </tr>
             </table>
-
             <!-- PMT Stamp -->
             <div class="pmt-stamp">
                 <img src="{{ asset('img/img_pmt.png') }}" alt="PMT Stamp">
