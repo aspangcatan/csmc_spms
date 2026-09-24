@@ -355,15 +355,6 @@
             <span>PMT Approvals</span>
         </a>
         @endif
-
-        <div class="my-6 border-t border-gray-50 mx-4"></div>
-        
-        <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 ml-4">Others</p>
-        
-        <a href="#" class="sidebar-item">
-            <i class="far fa-calendar-check"></i>
-            <span>Tasks</span>
-        </a>
     </div>
 
     <div class="p-4 mt-auto">

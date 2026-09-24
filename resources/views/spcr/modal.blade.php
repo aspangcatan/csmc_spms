@@ -520,6 +520,8 @@
                 if (spcr.status === 'Target Submitted' || spcr.status === 'Accomplishment Submitted') {
                     canApprove = isSupervisor;
                 } else if (spcr.status === 'Supervisor Approved') {
+                    canApprove = isDivHead;
+                } else if (spcr.status === 'Division Head Approved') {
                     canApprove = isPmt;
                 }
 

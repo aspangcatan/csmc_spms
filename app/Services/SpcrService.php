@@ -60,6 +60,11 @@ class SpcrService
                 'updated_by' => $data['userid']
             ]);
 
+            // The form can create an SPCR already submitted.
+            if ($spcr->status !== 'Draft Target') {
+                $this->logStatusChange($spcr, 'Draft Target', $data['userid']);
+            }
+
             return $spcr->load(['entries', 'logs']);
         });
     }
@@ -76,6 +81,7 @@ class SpcrService
     {
         return DB::transaction(function () use ($id, $data) {
             $spcr = Spcr::findOrFail($id);
+            $oldStatus = $spcr->status;
             $spcrData = $data['spcr'] ?? [];
             foreach (['status', 'year', 'semester', 'period_from', 'period_to', 'spcr_date', 'date_done', 'core_dist', 'support_dist', 'strategic_dist', 'highest_supervisor'] as $key) {
                 if (array_key_exists($key, $data)) {
@@ -89,8 +95,23 @@ class SpcrService
             if (isset($data['strategic_entries'])) $this->syncEntries($spcr, 'strategic', $data['strategic_entries']);
 
             $this->calculateRatings($spcr);
+
+            // The form submits by sending the new status through update.
+            if ($spcr->status !== $oldStatus) {
+                $this->logStatusChange($spcr, $oldStatus, auth()->id());
+            }
+
             return $spcr->load('entries');
         });
+    }
+
+    protected function logStatusChange(Spcr $spcr, $oldStatus, $userId)
+    {
+        $spcr->logs()->create([
+            'subject' => str_ends_with($spcr->status, 'Submitted') ? 'Submitted' : $spcr->status,
+            'content' => "Status changed from {$oldStatus} to {$spcr->status}.",
+            'updated_by' => $userId
+        ]);
     }
 
     protected function syncEntries(Spcr $spcr, $category, array $entries)
@@ -266,19 +287,24 @@ class SpcrService
         if ($spcr->status === 'Target Submitted' || $spcr->status === 'Accomplishment Submitted') {
             if ($spcr->supervisor_id != $userId) throw new \Exception("Only Supervisor can approve this stage.");
         } elseif ($spcr->status === 'Supervisor Approved') {
+            if ($spcr->division_head_id != $userId) throw new \Exception("Only the Division Head can approve this stage.");
+        } elseif ($spcr->status === 'Division Head Approved') {
             if (!$isPmtUser) throw new \Exception("Only PMT can approve this stage.");
         }
 
         $oldStatus = $spcr->status;
-        $newStatus = $oldStatus;
 
         if ($oldStatus === 'Target Submitted') {
             $newStatus = 'Target Approved';
         } elseif ($oldStatus === 'Accomplishment Submitted') {
             $newStatus = 'Supervisor Approved';
         } elseif ($oldStatus === 'Supervisor Approved') {
+            $newStatus = 'Division Head Approved';
+        } elseif ($oldStatus === 'Division Head Approved') {
             $newStatus = 'PMT Approved';
             $spcr->pmt_id = $userId;
+        } else {
+            return $spcr; // No transition
         }
 
         $spcr->status = $newStatus;

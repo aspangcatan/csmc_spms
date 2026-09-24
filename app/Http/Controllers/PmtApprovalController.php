@@ -24,7 +24,7 @@ class PmtApprovalController extends Controller
             ->get();
 
         $pendingSpcrs = Spcr::with('user')
-            ->where('status', 'Supervisor Approved')
+            ->where('status', 'Division Head Approved')
             ->where('year', $year)
             ->orderBy('updated_at', 'desc')
             ->get();

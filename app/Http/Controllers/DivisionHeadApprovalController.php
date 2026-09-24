@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ipcr;
+use App\Models\Spcr;
 use Illuminate\Http\Request;
 
 class DivisionHeadApprovalController extends Controller
@@ -24,7 +25,24 @@ class DivisionHeadApprovalController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('division_head.index', compact('pendingIpcrs', 'year'));
+        // A Section Head's SPCR supervisor is usually the Division Head too,
+        // so include both the supervisor stages and the Division Head stage.
+        $pendingSpcrs = Spcr::with('user')
+            ->where(function ($query) use ($userId) {
+                $query->where(function ($q) use ($userId) {
+                    $q->where('supervisor_id', $userId)
+                        ->whereIn('status', ['Target Submitted', 'Accomplishment Submitted']);
+                })->orWhere(function ($q) use ($userId) {
+                    $q->where('division_head_id', $userId)
+                        ->where('status', 'Supervisor Approved');
+                });
+            })
+            ->where('year', $year)
+            ->where('userid', '!=', $userId)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('division_head.index', compact('pendingIpcrs', 'pendingSpcrs', 'year'));
     }
 }
 

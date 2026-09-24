@@ -7,7 +7,7 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
             <h1 class="text-2xl font-black text-gray-900 tracking-tight">Division Head Approvals</h1>
-            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">IPCR Queue for Division Head Review</p>
+            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">IPCR and SPCR Queue for Division Head Review</p>
         </div>
         <div class="bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
             <div>
@@ -22,12 +22,13 @@
             <div class="h-8 w-px bg-gray-100"></div>
             <div class="text-right">
                 <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Pending</p>
-                <p class="text-sm font-black text-gray-900 leading-none">{{ $pendingIpcrs->count() }}</p>
+                <p class="text-sm font-black text-gray-900 leading-none">{{ $pendingIpcrs->count() + $pendingSpcrs->count() }}</p>
             </div>
         </div>
     </div>
 
-    <div class="card-modern overflow-hidden border-0 bg-white">
+    {{-- IPCR Queue --}}
+    <div class="card-modern overflow-hidden border-0 bg-white mb-8">
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">IPCR Queue</h2>
             @if($pendingIpcrs->count() > 0)
@@ -101,12 +102,89 @@
             </table>
         </div>
     </div>
+
+    {{-- SPCR Queue --}}
+    <div class="card-modern overflow-hidden border-0 bg-white">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+            <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">SPCR Queue</h2>
+            @if($pendingSpcrs->count() > 0)
+            <button id="bulkApproveSpcrBtn" onclick="bulkApproveSpcrs()"
+                    class="hidden px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm items-center gap-2">
+                <i class="fas fa-check-double"></i>
+                Bulk Approve (<span id="spcrSelectedCount">0</span>)
+            </button>
+            @endif
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
+                        <th class="px-6 py-4 w-10">
+                            <input type="checkbox" id="spcrSelectAll"
+                                   class="w-4 h-4 rounded border-gray-300 text-emerald-500 cursor-pointer focus:ring-emerald-400">
+                        </th>
+                        <th class="px-6 py-4">Section Head</th>
+                        <th class="px-6 py-4">Section</th>
+                        <th class="px-6 py-4">Period</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @forelse($pendingSpcrs as $spcr)
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="px-6 py-4">
+                                <input type="checkbox" name="spcr_ids[]" value="{{ $spcr->id }}"
+                                       class="spcr-checkbox w-4 h-4 rounded border-gray-300 text-emerald-500 cursor-pointer focus:ring-emerald-400">
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-bold text-gray-900">{{ $spcr->user->name ?? 'Unknown User' }}</p>
+                                <p class="text-[10px] text-gray-400 font-medium">{{ $spcr->user->designation_name ?? '' }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-xs font-bold text-gray-700">{{ $spcr->user->section_name ?? 'N/A' }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-xs font-bold text-gray-700">FY {{ $spcr->year }} - {{ $spcr->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
+                                    {{ $spcr->status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{{ route('spcr.print', $spcr->id) }}" target="_blank"
+                                       class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm"
+                                       title="View/Print SPCR">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                    <button type="button" onclick="approveSpcrAsDivisionHead({{ $spcr->id }})"
+                                            class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm"
+                                            title="Approve SPCR">
+                                        Approve
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-16 text-center">
+                                <p class="text-sm font-bold text-gray-500">No SPCR records awaiting Division Head approval.</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection
 
 @push('scripts')
 <script>
     window.ipcrApiBaseUrl = window.ipcrApiBaseUrl || @json(url('/api/ipcr'));
+    window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
 
     // ── Checkbox selection ────────────────────────────────────────────────────
 
@@ -128,6 +206,26 @@
         $('#selectAll').prop('indeterminate', checked > 0 && checked < total);
         $('#selectAll').prop('checked', checked === total);
         updateBulkBtn();
+    });
+
+    function updateSpcrBulkBtn() {
+        const count = $('.spcr-checkbox:checked').length;
+        $('#spcrSelectedCount').text(count);
+        count > 0 ? $('#bulkApproveSpcrBtn').removeClass('hidden').addClass('flex')
+                  : $('#bulkApproveSpcrBtn').addClass('hidden').removeClass('flex');
+    }
+
+    $('#spcrSelectAll').on('change', function () {
+        $('.spcr-checkbox').prop('checked', this.checked);
+        updateSpcrBulkBtn();
+    });
+
+    $(document).on('change', '.spcr-checkbox', function () {
+        const total   = $('.spcr-checkbox').length;
+        const checked = $('.spcr-checkbox:checked').length;
+        $('#spcrSelectAll').prop('indeterminate', checked > 0 && checked < total);
+        $('#spcrSelectAll').prop('checked', checked === total);
+        updateSpcrBulkBtn();
     });
 
     // ── Fetch helper ──────────────────────────────────────────────────────────
@@ -163,6 +261,19 @@
         );
     }
 
+    function approveSpcrAsDivisionHead(id) {
+        confirmAction(
+            'Approve SPCR?',
+            'This will approve the selected SPCR at its current stage.',
+            'APPROVE',
+            () => {
+                postWithCsrf(`${window.spcrApiBaseUrl}/${id}/approve`)
+                    .then(() => { toast('SPCR approved successfully.'); window.location.reload(); })
+                    .catch((err) => showAlert('Error', err.message, 'error'));
+            }
+        );
+    }
+
     // ── Bulk approve ──────────────────────────────────────────────────────────
 
     function bulkApproveIpcrs() {
@@ -175,6 +286,27 @@
             'APPROVE ALL',
             () => {
                 postWithCsrf(`${window.ipcrApiBaseUrl}/bulk-approve`, { ids })
+                    .then((data) => {
+                        const msg = `${data.approved.length} approved` +
+                                    (data.failed.length ? `, ${data.failed.length} failed.` : '.');
+                        toast(msg);
+                        window.location.reload();
+                    })
+                    .catch((err) => showAlert('Error', err.message, 'error'));
+            }
+        );
+    }
+
+    function bulkApproveSpcrs() {
+        const ids = $('.spcr-checkbox:checked').map(function () { return parseInt($(this).val()); }).get();
+        if (!ids.length) return;
+
+        confirmAction(
+            'Bulk Approve SPCR?',
+            `This will approve ${ids.length} selected SPCR record(s). This cannot be undone.`,
+            'APPROVE ALL',
+            () => {
+                postWithCsrf(`${window.spcrApiBaseUrl}/bulk-approve`, { ids })
                     .then((data) => {
                         const msg = `${data.approved.length} approved` +
                                     (data.failed.length ? `, ${data.failed.length} failed.` : '.');
