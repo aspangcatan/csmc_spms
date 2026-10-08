@@ -340,7 +340,8 @@ class IpcrService
         ->get();
     }
 
-    public function approveIpcr($id, $userId, $comments = null)
+    // $comments is the supervisor feedback printed on the form; $remarks only goes to the log.
+    public function approveIpcr($id, $userId, $comments = null, $remarks = null)
     {
         $ipcr = Ipcr::findOrFail($id);
         $oldStatus = $ipcr->status;
@@ -378,10 +379,42 @@ class IpcrService
         
         $ipcr->logs()->create([
             'subject' => 'Approved',
-            'content' => "Status changed from '{$oldStatus}' to '{$ipcr->status}'." . ($comments ? " Comment: {$comments}" : ""),
+            'content' => "Status changed from '{$oldStatus}' to '{$ipcr->status}'." . ($comments ? " Comment: {$comments}" : "") . ($remarks ? " Remarks: {$remarks}" : ""),
             'updated_by' => $userId,
         ]);
-        
+
+        return $ipcr;
+    }
+
+    // The approver of the current stage returns the IPCR to the owner for revision and resubmission.
+    public function rejectIpcr($id, $userId, $remarks)
+    {
+        $ipcr = Ipcr::findOrFail($id);
+        $actingUser = \App\Models\User::find($userId);
+
+        if (in_array($ipcr->status, ['Target Submitted', 'Accomplishment Submitted'])) {
+            if ($ipcr->supervisor_id != $userId) throw new \Exception("Only the Supervisor can reject this stage.");
+            $role = 'Supervisor';
+        } elseif ($ipcr->status === 'Supervisor Approved') {
+            if ($ipcr->division_head != $userId) throw new \Exception("Only the Division Head can reject this stage.");
+            $role = 'Division Head';
+        } elseif ($ipcr->status === 'Division Head Approved') {
+            if (!$actingUser || !$actingUser->isPmt()) throw new \Exception("Only PMT can reject this stage.");
+            $role = 'PMT';
+        } else {
+            throw new \Exception("This IPCR is not awaiting approval.");
+        }
+
+        $oldStatus = $ipcr->status;
+        $ipcr->status = $oldStatus === 'Target Submitted' ? 'Draft Target' : 'Draft Accomplishment';
+        $ipcr->save();
+
+        $ipcr->logs()->create([
+            'subject' => "Rejected by {$role}",
+            'content' => "Status changed from '{$oldStatus}' to '{$ipcr->status}'. Remarks: {$remarks}",
+            'updated_by' => $userId,
+        ]);
+
         return $ipcr;
     }
 

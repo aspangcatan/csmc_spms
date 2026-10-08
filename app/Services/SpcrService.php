@@ -277,7 +277,7 @@ class SpcrService
         return $spcr;
     }
 
-    public function approveSpcr($id, $userId)
+    public function approveSpcr($id, $userId, $remarks = null)
     {
         $spcr = Spcr::findOrFail($id);
         $actingUser = User::find($userId);
@@ -312,7 +312,39 @@ class SpcrService
 
         $spcr->logs()->create([
             'subject' => $newStatus,
-            'content' => "Status changed from {$oldStatus} to {$newStatus}.",
+            'content' => "Status changed from {$oldStatus} to {$newStatus}." . ($remarks ? " Remarks: {$remarks}" : ""),
+            'updated_by' => $userId
+        ]);
+
+        return $spcr;
+    }
+
+    // The approver of the current stage returns the SPCR to the owner for revision and resubmission.
+    public function rejectSpcr($id, $userId, $remarks)
+    {
+        $spcr = Spcr::findOrFail($id);
+        $actingUser = User::find($userId);
+
+        if (in_array($spcr->status, ['Target Submitted', 'Accomplishment Submitted'])) {
+            if ($spcr->supervisor_id != $userId) throw new \Exception("Only the Supervisor can reject this stage.");
+            $role = 'Supervisor';
+        } elseif ($spcr->status === 'Supervisor Approved') {
+            if ($spcr->division_head_id != $userId) throw new \Exception("Only the Division Head can reject this stage.");
+            $role = 'Division Head';
+        } elseif ($spcr->status === 'Division Head Approved') {
+            if (!$actingUser || !$actingUser->isPmt()) throw new \Exception("Only PMT can reject this stage.");
+            $role = 'PMT';
+        } else {
+            throw new \Exception("This SPCR is not awaiting approval.");
+        }
+
+        $oldStatus = $spcr->status;
+        $spcr->status = $oldStatus === 'Target Submitted' ? 'Draft Target' : 'Draft Accomplishment';
+        $spcr->save();
+
+        $spcr->logs()->create([
+            'subject' => "Rejected by {$role}",
+            'content' => "Status changed from {$oldStatus} to {$spcr->status}. Remarks: {$remarks}",
             'updated_by' => $userId
         ]);
 

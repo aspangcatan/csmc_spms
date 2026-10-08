@@ -32,11 +32,18 @@
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">IPCR Queue</h2>
             @if($pendingIpcrs->count() > 0)
-            <button id="bulkApproveBtn" onclick="bulkApproveIpcrs()"
-                    class="hidden px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm items-center gap-2">
-                <i class="fas fa-check-double"></i>
-                Bulk Approve (<span id="selectedCount">0</span>)
-            </button>
+            <div id="ipcrBulkActions" class="hidden items-center gap-2">
+                <button type="button" onclick="bulkDecide('ipcr', 'reject')"
+                        class="px-5 h-9 rounded-xl bg-white border border-red-200 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-undo"></i>
+                    Bulk Reject (<span class="ipcr-selected-count">0</span>)
+                </button>
+                <button type="button" onclick="bulkDecide('ipcr', 'approve')"
+                        class="px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-check-double"></i>
+                    Bulk Approve (<span class="ipcr-selected-count">0</span>)
+                </button>
+            </div>
             @endif
         </div>
         <div class="overflow-x-auto">
@@ -44,7 +51,7 @@
                 <thead>
                     <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
                         <th class="px-6 py-4 w-10">
-                            <input type="checkbox" id="selectAll"
+                            <input type="checkbox" id="ipcrSelectAll"
                                    class="w-4 h-4 rounded border-gray-300 text-emerald-500 cursor-pointer focus:ring-emerald-400">
                         </th>
                         <th class="px-6 py-4">Employee</th>
@@ -83,10 +90,11 @@
                                        title="View/Print IPCR">
                                         <i class="fas fa-print"></i>
                                     </a>
-                                    <button type="button" onclick="approveIpcrAsDivisionHead({{ $ipcr->id }})"
-                                            class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm"
-                                            title="Approve as Division Head">
-                                        Approve
+                                    <button type="button"
+                                            onclick="openReview('ipcr', {{ $ipcr->id }}, @js($ipcr->user->name ?? 'Unknown User'), @js('FY ' . $ipcr->year . ' - ' . ($ipcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
+                                            title="View details, add remarks, approve or reject">
+                                        <i class="fas fa-eye"></i> Review
                                     </button>
                                 </div>
                             </td>
@@ -108,11 +116,18 @@
         <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
             <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">SPCR Queue</h2>
             @if($pendingSpcrs->count() > 0)
-            <button id="bulkApproveSpcrBtn" onclick="bulkApproveSpcrs()"
-                    class="hidden px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm items-center gap-2">
-                <i class="fas fa-check-double"></i>
-                Bulk Approve (<span id="spcrSelectedCount">0</span>)
-            </button>
+            <div id="spcrBulkActions" class="hidden items-center gap-2">
+                <button type="button" onclick="bulkDecide('spcr', 'reject')"
+                        class="px-5 h-9 rounded-xl bg-white border border-red-200 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-undo"></i>
+                    Bulk Reject (<span class="spcr-selected-count">0</span>)
+                </button>
+                <button type="button" onclick="bulkDecide('spcr', 'approve')"
+                        class="px-5 h-9 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-check-double"></i>
+                    Bulk Approve (<span class="spcr-selected-count">0</span>)
+                </button>
+            </div>
             @endif
         </div>
         <div class="overflow-x-auto">
@@ -159,10 +174,11 @@
                                        title="View/Print SPCR">
                                         <i class="fas fa-print"></i>
                                     </a>
-                                    <button type="button" onclick="approveSpcrAsDivisionHead({{ $spcr->id }})"
-                                            class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm"
-                                            title="Approve SPCR">
-                                        Approve
+                                    <button type="button"
+                                            onclick="openReview('spcr', {{ $spcr->id }}, @js($spcr->user->name ?? 'Unknown User'), @js('FY ' . $spcr->year . ' - ' . ($spcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
+                                            title="View details, add remarks, approve or reject">
+                                        <i class="fas fa-eye"></i> Review
                                     </button>
                                 </div>
                             </td>
@@ -179,147 +195,12 @@
         </div>
     </div>
 </div>
+
+@include('partials.approval_review', ['decideUrl' => route('division_head.decide'), 'roleLabel' => 'Division Head'])
 @endsection
 
 @push('scripts')
 <script>
-    window.ipcrApiBaseUrl = window.ipcrApiBaseUrl || @json(url('/api/ipcr'));
-    window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
-
-    // ── Checkbox selection ────────────────────────────────────────────────────
-
-    function updateBulkBtn() {
-        const count = $('.ipcr-checkbox:checked').length;
-        $('#selectedCount').text(count);
-        count > 0 ? $('#bulkApproveBtn').removeClass('hidden').addClass('flex')
-                  : $('#bulkApproveBtn').addClass('hidden').removeClass('flex');
-    }
-
-    $('#selectAll').on('change', function () {
-        $('.ipcr-checkbox').prop('checked', this.checked);
-        updateBulkBtn();
-    });
-
-    $(document).on('change', '.ipcr-checkbox', function () {
-        const total   = $('.ipcr-checkbox').length;
-        const checked = $('.ipcr-checkbox:checked').length;
-        $('#selectAll').prop('indeterminate', checked > 0 && checked < total);
-        $('#selectAll').prop('checked', checked === total);
-        updateBulkBtn();
-    });
-
-    function updateSpcrBulkBtn() {
-        const count = $('.spcr-checkbox:checked').length;
-        $('#spcrSelectedCount').text(count);
-        count > 0 ? $('#bulkApproveSpcrBtn').removeClass('hidden').addClass('flex')
-                  : $('#bulkApproveSpcrBtn').addClass('hidden').removeClass('flex');
-    }
-
-    $('#spcrSelectAll').on('change', function () {
-        $('.spcr-checkbox').prop('checked', this.checked);
-        updateSpcrBulkBtn();
-    });
-
-    $(document).on('change', '.spcr-checkbox', function () {
-        const total   = $('.spcr-checkbox').length;
-        const checked = $('.spcr-checkbox:checked').length;
-        $('#spcrSelectAll').prop('indeterminate', checked > 0 && checked < total);
-        $('#spcrSelectAll').prop('checked', checked === total);
-        updateSpcrBulkBtn();
-    });
-
-    // ── Fetch helper ──────────────────────────────────────────────────────────
-
-    function postWithCsrf(url, body = null) {
-        return fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                'Accept': 'application/json',
-                ...(body ? { 'Content-Type': 'application/json' } : {})
-            },
-            ...(body ? { body: JSON.stringify(body) } : {})
-        }).then(async (res) => {
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) throw new Error(data.message || 'Request failed.');
-            return data;
-        });
-    }
-
-    // ── Individual approve ────────────────────────────────────────────────────
-
-    function approveIpcrAsDivisionHead(id) {
-        confirmAction(
-            'Approve IPCR?',
-            'This will perform Division Head approval for the selected IPCR.',
-            'APPROVE',
-            () => {
-                postWithCsrf(`${window.ipcrApiBaseUrl}/${id}/approve`)
-                    .then(() => { toast('IPCR approved successfully.'); window.location.reload(); })
-                    .catch((err) => showAlert('Error', err.message, 'error'));
-            }
-        );
-    }
-
-    function approveSpcrAsDivisionHead(id) {
-        confirmAction(
-            'Approve SPCR?',
-            'This will approve the selected SPCR at its current stage.',
-            'APPROVE',
-            () => {
-                postWithCsrf(`${window.spcrApiBaseUrl}/${id}/approve`)
-                    .then(() => { toast('SPCR approved successfully.'); window.location.reload(); })
-                    .catch((err) => showAlert('Error', err.message, 'error'));
-            }
-        );
-    }
-
-    // ── Bulk approve ──────────────────────────────────────────────────────────
-
-    function bulkApproveIpcrs() {
-        const ids = $('.ipcr-checkbox:checked').map(function () { return parseInt($(this).val()); }).get();
-        if (!ids.length) return;
-
-        confirmAction(
-            'Bulk Approve IPCR?',
-            `This will perform Division Head approval for ${ids.length} selected IPCR record(s). This cannot be undone.`,
-            'APPROVE ALL',
-            () => {
-                postWithCsrf(`${window.ipcrApiBaseUrl}/bulk-approve`, { ids })
-                    .then((data) => {
-                        const msg = `${data.approved.length} approved` +
-                                    (data.failed.length ? `, ${data.failed.length} failed.` : '.');
-                        toast(msg);
-                        window.location.reload();
-                    })
-                    .catch((err) => showAlert('Error', err.message, 'error'));
-            }
-        );
-    }
-
-    function bulkApproveSpcrs() {
-        const ids = $('.spcr-checkbox:checked').map(function () { return parseInt($(this).val()); }).get();
-        if (!ids.length) return;
-
-        confirmAction(
-            'Bulk Approve SPCR?',
-            `This will approve ${ids.length} selected SPCR record(s). This cannot be undone.`,
-            'APPROVE ALL',
-            () => {
-                postWithCsrf(`${window.spcrApiBaseUrl}/bulk-approve`, { ids })
-                    .then((data) => {
-                        const msg = `${data.approved.length} approved` +
-                                    (data.failed.length ? `, ${data.failed.length} failed.` : '.');
-                        toast(msg);
-                        window.location.reload();
-                    })
-                    .catch((err) => showAlert('Error', err.message, 'error'));
-            }
-        );
-    }
-
-    // ── Year filter ───────────────────────────────────────────────────────────
-
     $('#yearFilter').on('change', function () {
         window.location.href = `{{ route('division_head.approvals') }}?year=${$(this).val()}`;
     });

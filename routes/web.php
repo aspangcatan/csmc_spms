@@ -66,7 +66,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/spcr/print/{id}', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print');
     Route::get('/spcr/{id}/print', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print.legacy');
     Route::get('/division-head/approvals', [DivisionHeadApprovalController::class, 'index'])->name('division_head.approvals');
+    Route::post('/division-head/decide', [DivisionHeadApprovalController::class, 'decide'])->name('division_head.decide');
     Route::get('/pmt/approvals', [PmtApprovalController::class, 'index'])->name('pmt.approvals');
+    Route::post('/pmt/decide', [PmtApprovalController::class, 'decide'])->name('pmt.decide');
     Route::prefix('api/spcr')->group(function () {
         Route::get('/by-semester', [\App\Http\Controllers\SpcrController::class, 'getByYearSemester']);
         Route::post('/', [\App\Http\Controllers\SpcrController::class, 'store']);
