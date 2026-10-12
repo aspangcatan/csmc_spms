@@ -220,6 +220,15 @@
             width: 180px;
             height: auto;
         }
+        #spcr-entries tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        /* Lay the page out at A4-landscape printable width while measuring page breaks. */
+        html.spcr-paginating body {
+            width: 1026px;
+        }
     </style>
 </head>
 
@@ -245,9 +254,37 @@
             $supportEntries = $spcr->entries->where('category', 'support')->values();
             $strategicEntries = $spcr->entries->where('category', 'strategic')->values();
 
-            $coreAvg = (float) ($coreEntries->avg('average_rating') ?: 0);
-            $supportAvg = (float) ($supportEntries->avg('average_rating') ?: 0);
-            $strategicAvg = (float) ($strategicEntries->avg('average_rating') ?: 0);
+            // Ratings are decimal columns returned as strings ("0.00" is truthy), so treat
+            // anything <= 0 as "not rated": blank on the form and excluded from averages.
+            $fmtRating = fn($value) => (float) $value > 0 ? number_format((float) $value, 2) : '';
+            $ratedAvg = fn($entries) => (float) ($entries->filter(fn($e) => (float) $e->average_rating > 0)->avg('average_rating') ?: 0);
+
+            // Merge consecutive rows that share the same Strategic Goal: the first row of a
+            // group gets the rowspan, the rest get 0 (cell omitted).
+            $outputSpans = function ($entries) {
+                $spans = [];
+                $start = null;
+                foreach ($entries as $i => $entry) {
+                    $key = trim((string) $entry->output);
+                    if ($start !== null && $key !== '' && $key === trim((string) $entries[$start]->output)) {
+                        $spans[$start]++;
+                        $spans[$i] = 0;
+                    } else {
+                        $start = $i;
+                        $spans[$i] = 1;
+                    }
+                }
+                return $spans;
+            };
+            $spans = [
+                'core' => $outputSpans($coreEntries),
+                'support' => $outputSpans($supportEntries),
+                'strategic' => $outputSpans($strategicEntries),
+            ];
+
+            $coreAvg = $ratedAvg($coreEntries);
+            $supportAvg = $ratedAvg($supportEntries);
+            $strategicAvg = $ratedAvg($strategicEntries);
 
             $coreWeight = ((float) ($spcr->core_dist ?: 0)) / 100;
             $supportWeight = ((float) ($spcr->support_dist ?: 0)) / 100;
@@ -366,7 +403,7 @@
                 </tr>
             </table>
 
-            <table>
+            <table id="spcr-entries">
                 <colgroup>
                     <col style="width: 13%">
                     <col style="width: 8%">
@@ -405,18 +442,20 @@
                     </tr>
                     @forelse($coreEntries as $entry)
                         <tr>
-                            <td><strong><em>{{ $entry->output }}</em></strong></td>
-                            <td colspan="3">{{ $entry->success_indicator }}</td>
-                            <td class="center">{{ $entry->accountability }}</td>
-                            <td colspan="3">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center">
-                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            @if($spans[$entry->category][$loop->index] > 0)
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                            @endif
+                            <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
+                            <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">
+                                <strong>{{ $fmtRating($entry->average_rating) }}</strong>
                             </td>
-                            <td colspan="2">{{ $entry->remarks }}</td>
+                            <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -426,7 +465,7 @@
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Core Functions)</td>
                         <td></td>
-                        <td class="center">{{ number_format($coreAvg, 2) }}</td>
+                        <td class="center">{{ $fmtRating($coreAvg) }}</td>
                         <td colspan="2"></td>
                     </tr>
                 </tbody>
@@ -437,18 +476,20 @@
                     </tr>
                     @forelse($supportEntries as $entry)
                         <tr>
-                            <td><strong><em>{{ $entry->output }}</em></strong></td>
-                            <td colspan="3">{{ $entry->success_indicator }}</td>
-                            <td class="center">{{ $entry->accountability }}</td>
-                            <td colspan="3">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center">
-                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            @if($spans[$entry->category][$loop->index] > 0)
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                            @endif
+                            <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
+                            <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">
+                                <strong>{{ $fmtRating($entry->average_rating) }}</strong>
                             </td>
-                            <td colspan="2">{{ $entry->remarks }}</td>
+                            <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -458,7 +499,7 @@
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Support Functions)</td>
                         <td></td>
-                        <td class="center">{{ number_format($supportAvg, 2) }}</td>
+                        <td class="center">{{ $fmtRating($supportAvg) }}</td>
                         <td colspan="2"></td>
                     </tr>
                 </tbody>
@@ -469,18 +510,20 @@
                     </tr>
                     @forelse($strategicEntries as $entry)
                         <tr>
-                            <td><strong><em>{{ $entry->output }}</em></strong></td>
-                            <td colspan="3">{{ $entry->success_indicator }}</td>
-                            <td class="center">{{ $entry->accountability }}</td>
-                            <td colspan="3">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center"><strong>{{ $entry->quantity_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->efficiency_rating ?: '' }}</strong></td>
-                            <td class="center"><strong>{{ $entry->timeliness_rating ?: '' }}</strong></td>
-                            <td class="center">
-                                <strong>{{ $entry->average_rating ? number_format((float) $entry->average_rating, 2) : '' }}</strong>
+                            @if($spans[$entry->category][$loop->index] > 0)
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                            @endif
+                            <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
+                            <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">
+                                <strong>{{ $fmtRating($entry->average_rating) }}</strong>
                             </td>
-                            <td colspan="2">{{ $entry->remarks }}</td>
+                            <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -490,7 +533,7 @@
                     <tr class="average-row">
                         <td colspan="11" class="text-right">Average Rating (Strategic Functions)</td>
                         <td></td>
-                        <td class="center">{{ number_format($strategicAvg, 2) }}</td>
+                        <td class="center">{{ $fmtRating($strategicAvg) }}</td>
                         <td colspan="2"></td>
                     </tr>
                 </tbody>
@@ -510,10 +553,10 @@
                 <tr class="center">
                     <td class="bold" style="text-align: left;">Core Functions</td>
                     <td colspan="2">{{ rtrim(rtrim(number_format($coreWeight, 2), '0'), '.') }}</td>
-                    <td colspan="2">{{ number_format($coreAvg, 2) }}</td>
-                    <td colspan="4">{{ number_format($coreFinal, 2) }}</td>
+                    <td colspan="2">{{ $fmtRating($coreAvg) }}</td>
+                    <td colspan="4">{{ $fmtRating($coreFinal) }}</td>
                     <td colspan="2" rowspan="3" style="vertical-align: middle;" class="bold">
-                        {{ number_format($finalAverage, 2) }}
+                        {{ $fmtRating($finalAverage) }}
                     </td>
                     <td colspan="2" rowspan="3" style="vertical-align: middle;" class="bold">{{ $finalAdjective }}</td>
                     <td colspan="2" rowspan="3"></td>
@@ -521,14 +564,14 @@
                 <tr class="center">
                     <td class="bold" style="text-align: left;">Support Functions</td>
                     <td colspan="2">{{ rtrim(rtrim(number_format($supportWeight, 2), '0'), '.') }}</td>
-                    <td colspan="2">{{ number_format($supportAvg, 2) }}</td>
-                    <td colspan="4">{{ number_format($supportFinal, 2) }}</td>
+                    <td colspan="2">{{ $fmtRating($supportAvg) }}</td>
+                    <td colspan="4">{{ $fmtRating($supportFinal) }}</td>
                 </tr>
                 <tr class="center">
                     <td class="bold" style="text-align: left;">Strategic Functions</td>
                     <td colspan="2">{{ rtrim(rtrim(number_format($strategicWeight, 2), '0'), '.') }}</td>
-                    <td colspan="2">{{ number_format($strategicAvg, 2) }}</td>
-                    <td colspan="4">{{ number_format($strategicFinal, 2) }}</td>
+                    <td colspan="2">{{ $fmtRating($strategicAvg) }}</td>
+                    <td colspan="4">{{ $fmtRating($strategicFinal) }}</td>
                 </tr>
                 {{-- #TODO --}}
                 <tr class="center bold">
@@ -593,6 +636,90 @@
             </div>
         </div>
     </div>
+    <script>
+        // A merged "Strategic Goals" cell that crosses a page break only shows its text on the
+        // first page. Before printing, simulate the page breaks and split any such cell so the
+        // goal is repeated at the top of the next page. The original markup is restored after.
+        (function () {
+            // A4 landscape (297 x 210mm) minus the 0.5in @page margins, in CSS px.
+            var PAGE_HEIGHT = 210 / 25.4 * 96 - 96;
+            var SAFETY = 4;
+            var table = document.getElementById('spcr-entries');
+            if (!table) return;
+            var originalHtml = null;
+
+            // Simulate Chrome's pagination of the entries table: returns the rows that start a
+            // new page, and the first one that falls inside a merged goal cell (if any).
+            function simulate() {
+                var thead = table.tHead;
+                var theadHeight = thead ? thead.getBoundingClientRect().height : 0;
+                var rows = [];
+                Array.prototype.forEach.call(table.tBodies, function (tbody) {
+                    Array.prototype.push.apply(rows, tbody.rows);
+                });
+                var result = { pageStarts: [], midGroup: null };
+                if (!rows.length) return result;
+
+                var cursor = rows[0].getBoundingClientRect().top + window.scrollY;
+                var group = null;
+                for (var i = 0; i < rows.length; i++) {
+                    var goal = rows[i].querySelector('td.goal-cell');
+                    if (goal) group = { cell: goal, start: i, startRow: rows[i], span: goal.rowSpan };
+
+                    var height = rows[i].getBoundingClientRect().height;
+                    var forced = rows[i].style.breakBefore === 'page';
+                    if (i > 0 && (forced || cursor + height > PAGE_HEIGHT - SAFETY)) {
+                        result.pageStarts.push(rows[i]);
+                        if (!result.midGroup && group && i > group.start && i < group.start + group.span) {
+                            result.midGroup = { row: rows[i], index: i, group: group };
+                        }
+                        cursor = theadHeight;
+                    }
+                    cursor += height;
+                }
+                return result;
+            }
+
+            function paginate() {
+                if (originalHtml !== null) return;
+                originalHtml = table.innerHTML;
+                document.documentElement.classList.add('spcr-paginating');
+                for (var guard = 0; guard < 500; guard++) {
+                    var before = simulate();
+                    var found = before.midGroup;
+                    if (!found) break;
+
+                    var group = found.group;
+                    var headRows = found.index - group.start;
+                    var clone = group.cell.cloneNode(true);
+                    clone.rowSpan = group.span - headRows;
+                    group.cell.rowSpan = headRows;
+                    found.row.insertBefore(clone, found.row.firstChild);
+
+                    // Giving the first part its own copy of the goal text can make it too tall
+                    // to stay on this page. If so, undo the split and start the group on a new page.
+                    var after = simulate();
+                    var pushed = after.pageStarts.indexOf(group.startRow) !== -1
+                        && before.pageStarts.indexOf(group.startRow) === -1;
+                    if (pushed) {
+                        found.row.removeChild(clone);
+                        group.cell.rowSpan = group.span;
+                        group.startRow.style.breakBefore = 'page';
+                    }
+                }
+            }
+
+            function restore() {
+                if (originalHtml === null) return;
+                table.innerHTML = originalHtml;
+                originalHtml = null;
+                document.documentElement.classList.remove('spcr-paginating');
+            }
+
+            window.addEventListener('beforeprint', paginate);
+            window.addEventListener('afterprint', restore);
+        })();
+    </script>
 </body>
 
 </html>
