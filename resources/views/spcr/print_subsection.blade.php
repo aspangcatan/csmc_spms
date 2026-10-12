@@ -425,16 +425,16 @@
                     @forelse($coreEntries as $entry)
                         <tr>
                             @if($spans[$entry->category][$loop->index] > 0)
-                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;">{{ $entry->output }}</td>
                             @endif
                             <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
                             <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
                             <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->average_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accomplishment_rate }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->quantity_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->efficiency_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->timeliness_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->average_rating) }}</td>
                             <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
@@ -455,16 +455,16 @@
                     @forelse($supportEntries as $entry)
                         <tr>
                             @if($spans[$entry->category][$loop->index] > 0)
-                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;">{{ $entry->output }}</td>
                             @endif
                             <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
                             <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
                             <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->average_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accomplishment_rate }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->quantity_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->efficiency_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->timeliness_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->average_rating) }}</td>
                             <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
@@ -485,16 +485,16 @@
                     @forelse($strategicEntries as $entry)
                         <tr>
                             @if($spans[$entry->category][$loop->index] > 0)
-                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;"><strong><em>{{ $entry->output }}</em></strong></td>
+                                <td rowspan="{{ $spans[$entry->category][$loop->index] }}" class="goal-cell center" style="vertical-align: middle;">{{ $entry->output }}</td>
                             @endif
                             <td colspan="3" style="text-align: left; vertical-align: middle;">{{ $entry->success_indicator }}</td>
                             <td class="center" style="vertical-align: middle;">{{ $entry->accountability }}</td>
                             <td colspan="3" class="center" style="vertical-align: middle;">{{ $entry->actual_accomplishment }}</td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $entry->accomplishment_rate }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->quantity_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->efficiency_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->timeliness_rating) }}</strong></td>
-                            <td class="center" style="vertical-align: middle;"><strong>{{ $fmtRating($entry->average_rating) }}</strong></td>
+                            <td class="center" style="vertical-align: middle;">{{ $entry->accomplishment_rate }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->quantity_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->efficiency_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->timeliness_rating) }}</td>
+                            <td class="center" style="vertical-align: middle;">{{ $fmtRating($entry->average_rating) }}</td>
                             <td colspan="2" class="center" style="vertical-align: middle;">{{ $entry->remarks }}</td>
                         </tr>
                     @empty
