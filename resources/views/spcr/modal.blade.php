@@ -24,6 +24,10 @@
                                     <span class="mt-3 text-gray-400 text-center text-[9px] uppercase tracking-widest leading-none w-24 mx-auto block opacity-80 group-hover:opacity-100 transition-opacity">
                                         {{ $status }}
                                     </span>
+                                    @if ($loop->last)
+                                        {{-- PMT x/N progress; a div so the label lookup (find('span')) skips it --}}
+                                        <div class="pmt-progress-badge hidden mt-2 py-0.5 px-2 rounded-full text-[9px] font-black uppercase tracking-widest ring-1 ring-inset"></div>
+                                    @endif
                                 </div>
                                 @if (!$loop->last)
                                     <div class="absolute top-[14px] left-[50%] w-full h-[2px] bg-gray-200 -z-0 status-line-bg"></div>
@@ -506,7 +510,7 @@
                 populateTable('#support-entries', spcr.entries.filter(e => e.category === 'support'));
                 populateTable('#strategic-entries', spcr.entries.filter(e => e.category === 'strategic'));
 
-                updateStatusIndicator(spcr.status);
+                updateStatusIndicator(spcr.status, spcr.pmt_progress);
                 updateButtonText(spcr.status);
                 toggleSemesterFields(spcr.status);
 
@@ -731,7 +735,7 @@
         window.open(`${window.spcrPrintBaseUrl}/${spcrId}`, '_blank');
     }
 
-    function updateStatusIndicator(currentStatus) {
+    function updateStatusIndicator(currentStatus, pmtProgress = null) {
         const statuses = [
             'Draft Target', 'Target Submitted', 'Target Approved',
             'Draft Accomplishment', 'Accomplishment Submitted', 
@@ -768,6 +772,33 @@
                 label.addClass('text-gray-400');
             }
         });
+
+        renderPmtBadge(currentStatus, pmtProgress);
+    }
+
+    // Shows "PMT x/N" under the last step while PMT members approve (all of them must approve).
+    function renderPmtBadge(currentStatus, progress) {
+        const badge = $('.pmt-progress-badge');
+        badge.addClass('hidden').removeClass('bg-amber-50 text-amber-600 ring-amber-100 bg-emerald-50 text-emerald-600 ring-emerald-100').removeAttr('title');
+        if (!progress || !progress.total || !['Division Head Approved', 'PMT Approved'].includes(currentStatus)) return;
+
+        const done = currentStatus === 'PMT Approved';
+        badge.text(`PMT ${progress.approved}/${progress.total}`)
+            .addClass(done ? 'bg-emerald-50 text-emerald-600 ring-emerald-100' : 'bg-amber-50 text-amber-600 ring-amber-100')
+            .removeClass('hidden');
+
+        const lines = [];
+        if (progress.approvers.length) lines.push('Approved: ' + progress.approvers.join(', '));
+        if (!done && progress.pending.length) lines.push('Pending: ' + progress.pending.join(', '));
+        if (lines.length) badge.attr('title', lines.join('\n'));
+
+        // In the PMT phase the last step is in progress, so highlight it like other current steps.
+        if (!done) {
+            const lastStep = $('.status-step').last();
+            lastStep.find('.status-circle').removeClass('bg-white border-gray-200 text-gray-300')
+                .addClass('bg-orange-500 border-orange-500 text-white scale-110 shadow-lg shadow-orange-500/20');
+            lastStep.find('span').removeClass('text-gray-400').addClass('text-orange-600 font-black opacity-100');
+        }
     }
 
     // Auto-compute Average Rating

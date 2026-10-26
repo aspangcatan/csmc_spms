@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ipcr;
 use App\Models\Spcr;
 use App\Services\IpcrService;
+use App\Services\PmtApprovalService;
 use App\Services\SpcrService;
 use Illuminate\Http\Request;
 
@@ -12,11 +13,13 @@ class PmtApprovalController extends Controller
 {
     protected $ipcrService;
     protected $spcrService;
+    protected $pmtApprovalService;
 
-    public function __construct(IpcrService $ipcrService, SpcrService $spcrService)
+    public function __construct(IpcrService $ipcrService, SpcrService $spcrService, PmtApprovalService $pmtApprovalService)
     {
         $this->ipcrService = $ipcrService;
         $this->spcrService = $spcrService;
+        $this->pmtApprovalService = $pmtApprovalService;
     }
 
     public function index(Request $request)
@@ -40,7 +43,22 @@ class PmtApprovalController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('pmt.index', compact('pendingIpcrs', 'pendingSpcrs', 'year'));
+        // Each member only sees records they haven't approved yet, with the overall PMT x/N progress.
+        $pmtTotal = count($this->pmtApprovalService->memberIds());
+        $pendingIpcrs = $this->withPmtProgress('ipcr', $pendingIpcrs, $userId);
+        $pendingSpcrs = $this->withPmtProgress('spcr', $pendingSpcrs, $userId);
+
+        return view('pmt.index', compact('pendingIpcrs', 'pendingSpcrs', 'year', 'pmtTotal'));
+    }
+
+    protected function withPmtProgress(string $type, $records, $userId)
+    {
+        $approvers = $this->pmtApprovalService->approverIdsFor($type, $records->pluck('id')->all());
+
+        return $records
+            ->reject(fn ($record) => in_array((int) $userId, $approvers[$record->id] ?? [], true))
+            ->each(fn ($record) => $record->pmt_approved_count = count($approvers[$record->id] ?? []))
+            ->values();
     }
 
     // Approves or rejects one or more IPCR/SPCR records, applying the same remarks to each.

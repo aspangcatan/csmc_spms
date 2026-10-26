@@ -95,7 +95,9 @@ class IpcrController extends Controller
     public function show($id)
     {
         $this->authorizeIpcrView($id);
-        return response()->json($this->ipcrService->getById($id));
+        $ipcr = $this->ipcrService->getById($id);
+        $ipcr->setAttribute('pmt_progress', app(\App\Services\PmtApprovalService::class)->progress('ipcr', $ipcr));
+        return response()->json($ipcr);
     }
 
     public function update(Request $request, $id)

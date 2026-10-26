@@ -71,6 +71,7 @@ class SpcrController extends Controller
     {
         $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'pmt', 'logs.user'])->findOrFail($id);
         $this->authorizeSpcrView($spcr);
+        $spcr->setAttribute('pmt_progress', app(\App\Services\PmtApprovalService::class)->progress('spcr', $spcr));
         return response()->json($spcr);
     }
 

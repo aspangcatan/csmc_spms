@@ -89,6 +89,9 @@
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
                                     {{ $ipcr->status }}
                                 </span>
+                                <span class="ml-1 inline-flex items-center py-1.5 px-3 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-amber-100" title="PMT members who have approved">
+                                    PMT {{ $ipcr->pmt_approved_count }}/{{ $pmtTotal }}
+                                </span>
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex justify-end gap-2">
@@ -168,6 +171,9 @@
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
                                     {{ $spcr->status }}
+                                </span>
+                                <span class="ml-1 inline-flex items-center py-1.5 px-3 rounded-full bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-amber-100" title="PMT members who have approved">
+                                    PMT {{ $spcr->pmt_approved_count }}/{{ $pmtTotal }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-right">

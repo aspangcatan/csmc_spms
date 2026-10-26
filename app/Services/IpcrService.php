@@ -362,9 +362,19 @@ class IpcrService
         } elseif ($ipcr->status === 'Supervisor Approved') {
             $ipcr->status = 'Division Head Approved';
         } elseif ($ipcr->status === 'Division Head Approved') {
-            if ($ipcr->highest_supervisor && $ipcr->highest_supervisor != $userId && !$isPmtUser) {
-                throw new \Exception("Only PMT can approve this stage.");
+            if (!$isPmtUser) throw new \Exception("Only PMT can approve this stage.");
+
+            // Every PMT member must approve; the status only moves on the last approval.
+            [$approved, $total] = app(PmtApprovalService::class)->approve('ipcr', (int) $ipcr->id, (int) $userId);
+            if ($approved < $total) {
+                $ipcr->logs()->create([
+                    'subject' => "PMT Approval ({$approved}/{$total})",
+                    'content' => "Approved by PMT member ({$approved} of {$total})." . ($remarks ? " Remarks: {$remarks}" : ""),
+                    'updated_by' => $userId,
+                ]);
+                return $ipcr;
             }
+
             $ipcr->status = 'PMT Approved';
             $ipcr->pmt_id = $userId;
         } else {
@@ -401,6 +411,7 @@ class IpcrService
         } elseif ($ipcr->status === 'Division Head Approved') {
             if (!$actingUser || !$actingUser->isPmt()) throw new \Exception("Only PMT can reject this stage.");
             $role = 'PMT';
+            app(PmtApprovalService::class)->reset('ipcr', (int) $ipcr->id);
         } else {
             throw new \Exception("This IPCR is not awaiting approval.");
         }

@@ -301,6 +301,17 @@ class SpcrService
         } elseif ($oldStatus === 'Supervisor Approved') {
             $newStatus = 'Division Head Approved';
         } elseif ($oldStatus === 'Division Head Approved') {
+            // Every PMT member must approve; the status only moves on the last approval.
+            [$approved, $total] = app(PmtApprovalService::class)->approve('spcr', (int) $spcr->id, (int) $userId);
+            if ($approved < $total) {
+                $spcr->logs()->create([
+                    'subject' => "PMT Approval ({$approved}/{$total})",
+                    'content' => "Approved by PMT member ({$approved} of {$total})." . ($remarks ? " Remarks: {$remarks}" : ""),
+                    'updated_by' => $userId
+                ]);
+                return $spcr;
+            }
+
             $newStatus = 'PMT Approved';
             $spcr->pmt_id = $userId;
         } else {
@@ -334,6 +345,7 @@ class SpcrService
         } elseif ($spcr->status === 'Division Head Approved') {
             if (!$actingUser || !$actingUser->isPmt()) throw new \Exception("Only PMT can reject this stage.");
             $role = 'PMT';
+            app(PmtApprovalService::class)->reset('spcr', (int) $spcr->id);
         } else {
             throw new \Exception("This SPCR is not awaiting approval.");
         }
