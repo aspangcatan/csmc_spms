@@ -204,7 +204,10 @@ class SpcrController extends Controller
             ->orderBy('description')
             ->get(['id', 'description', 'division']);
         
-        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section', 'status'));
+        $pmtBadges = app(\App\Services\PmtApprovalService::class)
+            ->badgeMap('spcr', collect($staffData->items())->pluck('spcr'));
+
+        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section', 'status', 'pmtBadges'));
     }
 
     public function print($id)

@@ -34,6 +34,8 @@
 
             <div class="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-gray-100 flex flex-col min-h-0">
                 <div class="flex-1 overflow-y-auto p-6">
+                    {{-- PMT x/N progress with approved/pending members; filled only for records in the PMT phase --}}
+                    <div id="reviewPmtProgress" class="hidden mb-6"></div>
                     <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">History</p>
                     <div id="reviewLogs" class="space-y-3"></div>
                 </div>
@@ -147,8 +149,17 @@
         $('#reviewFrame').attr('src', `${printUrls[type]}/${id}`);
         $('#reviewRemarks').val('');
         $('#reviewLogs').html('<p class="text-xs text-gray-400">Loading...</p>');
+        $('#reviewPmtProgress').addClass('hidden').empty();
         $('#reviewModal').removeClass('hidden').addClass('flex');
         $('body').addClass('overflow-hidden');
+
+        fetch(`${apiBaseUrls[type]}/${id}`, { headers: { 'Accept': 'application/json' } })
+            .then((res) => res.ok ? res.json() : null)
+            .then((record) => {
+                if (!currentReview || currentReview.id !== id) return;
+                renderPmtProgress(record);
+            })
+            .catch(() => {});
 
         fetch(`${apiBaseUrls[type]}/${id}/logs`, { headers: { 'Accept': 'application/json' } })
             .then((res) => res.ok ? res.json() : [])
@@ -168,6 +179,35 @@
                     </div>`).join(''));
             })
             .catch(() => $('#reviewLogs').html('<p class="text-xs text-gray-400">Unable to load history.</p>'));
+    }
+
+    // Every PMT member must approve, so show the x/N count and who is still pending.
+    function renderPmtProgress(record) {
+        const progress = record?.pmt_progress;
+        if (!progress || !progress.total || !['Division Head Approved', 'PMT Approved'].includes(record.status)) return;
+
+        const nameList = (names, icon, color) => names.length
+            ? names.map((n) => `<li class="flex items-center gap-2 text-xs text-gray-700"><i class="fas ${icon} ${color} text-[10px]"></i>${escapeHtml(n)}</li>`).join('')
+            : '<li class="text-xs text-gray-400">None</li>';
+        const done = record.status === 'PMT Approved';
+
+        $('#reviewPmtProgress').html(`
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">PMT Approval</p>
+                <span class="py-1 px-3 rounded-full ${done ? 'bg-emerald-50 text-emerald-600 ring-emerald-100' : 'bg-amber-50 text-amber-600 ring-amber-100'} text-[10px] font-black uppercase tracking-widest ring-1 ring-inset">
+                    PMT ${progress.approved}/${progress.total}
+                </span>
+            </div>
+            <div class="rounded-xl border border-gray-100 p-3 space-y-3">
+                <div>
+                    <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Approved</p>
+                    <ul class="space-y-1">${nameList(progress.approvers, 'fa-check-circle', 'text-emerald-500')}</ul>
+                </div>
+                ${done ? '' : `<div>
+                    <p class="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Pending</p>
+                    <ul class="space-y-1">${nameList(progress.pending, 'fa-clock', 'text-amber-500')}</ul>
+                </div>`}
+            </div>`).removeClass('hidden');
     }
 
     function closeReview() {

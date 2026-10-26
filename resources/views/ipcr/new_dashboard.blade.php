@@ -74,13 +74,21 @@
                 @php
                     $status = $filteredIpcr->status ?? 'NOT SUBMITTED';
                     $style = 'bg-gray-100 text-gray-500';
-                    if(str_contains($status, 'Approved')) $style = 'bg-emerald-50 text-emerald-600';
+                    // Division Head Approved still waits on PMT, so it isn't shown as fully approved.
+                    if($status === 'Division Head Approved') $style = 'bg-purple-50 text-purple-600';
+                    elseif(str_contains($status, 'Approved')) $style = 'bg-emerald-50 text-emerald-600';
                     elseif(str_contains($status, 'Submitted')) $style = 'bg-orange-50 text-orange-600';
                     elseif(str_contains($status, 'Draft')) $style = 'bg-blue-50 text-blue-600';
+                    $periodPmtBadge = $filteredIpcr ? ($pmtBadges[$filteredIpcr->id] ?? null) : null;
                 @endphp
                 <span class="px-3 py-1 rounded-full {{ $style }} text-[10px] font-black uppercase tracking-widest">
                     {{ $status }}
                 </span>
+                @if($periodPmtBadge)
+                    <span class="px-3 py-1 rounded-full {{ $status === 'PMT Approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }} text-[10px] font-black uppercase tracking-widest" title="PMT members who have approved">
+                        {{ $periodPmtBadge }}
+                    </span>
+                @endif
             </div>
             <p class="text-[10px] text-gray-400 mt-5 border-t border-gray-50 pt-4">
                 {{ $filteredIpcr ? 'Last activity: ' . $filteredIpcr->updated_at->diffForHumans() : 'No activity for this period' }}
@@ -224,7 +232,8 @@
                             <p class="text-2xl font-black mb-2 italic">
                                 @php
                                     $gStatus = $globalIpcr->status;
-                                    if(str_contains($gStatus, 'Approved')) echo 'Current Approved';
+                                    if($gStatus === 'Division Head Approved') echo e('Awaiting ' . ($pmtBadges[$globalIpcr->id] ?? 'PMT'));
+                                    elseif(str_contains($gStatus, 'Approved')) echo 'Current Approved';
                                     elseif(str_contains($gStatus, 'Submitted')) echo 'Pending Review';
                                     else echo $gStatus;
                                 @endphp

@@ -143,6 +143,11 @@
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full {{ $style }} text-[10px] font-black uppercase tracking-widest ring-1 ring-inset">
                                     {{ $status }}
                                 </span>
+                                @if($data['ipcr'] && isset($pmtBadges[$data['ipcr']->id]))
+                                    <span class="ml-1 inline-flex items-center py-1.5 px-3 rounded-full {{ $status === 'PMT Approved' ? 'bg-emerald-50 text-emerald-600 ring-emerald-100' : 'bg-amber-50 text-amber-600 ring-amber-100' }} text-[10px] font-black uppercase tracking-widest ring-1 ring-inset" title="PMT members who have approved">
+                                        {{ $pmtBadges[$data['ipcr']->id] }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-8 py-5 text-right">
                                 <div class="flex justify-end gap-2">

@@ -78,6 +78,25 @@ class PmtApprovalService
         ];
     }
 
+    // "PMT x/N" labels keyed by record id for list pages; only records in or past the PMT phase get one.
+    public function badgeMap(string $type, $records): array
+    {
+        $records = collect($records)->filter()->filter(
+            fn ($record) => in_array($record->status, ['Division Head Approved', 'PMT Approved'], true)
+        );
+        $approvers = $this->approverIdsFor($type, $records->pluck('id')->all());
+        $total = count($this->memberIds());
+
+        return $records->mapWithKeys(function ($record) use ($approvers, $total) {
+            $approved = count($approvers[$record->id] ?? []);
+            // Records approved before multi-member PMT approval have no rows; show them as complete.
+            if ($record->status === 'PMT Approved' && $approved === 0) {
+                $approved = $total;
+            }
+            return [$record->id => "PMT {$approved}/{$total}"];
+        })->all();
+    }
+
     // Records one member's approval and returns [approvedCount, total].
     public function approve(string $type, int $recordId, int $userId): array
     {

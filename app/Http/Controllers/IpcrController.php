@@ -337,8 +337,11 @@ class IpcrController extends Controller
             ->orderBy('year', 'desc')
             ->orderBy('semester', 'desc')
             ->first();
-        
-        return view('ipcr.new_dashboard', compact('latestIpcr', 'filteredIpcr', 'globalIpcr', 'supervisorStats', 'history', 'year', 'semester'));
+
+        // "PMT x/N" labels so records still in the PMT phase don't read as fully approved.
+        $pmtBadges = app(\App\Services\PmtApprovalService::class)->badgeMap('ipcr', [$filteredIpcr, $globalIpcr]);
+
+        return view('ipcr.new_dashboard', compact('latestIpcr', 'filteredIpcr', 'globalIpcr', 'supervisorStats', 'history', 'year', 'semester', 'pmtBadges'));
     }
 
     public function staff(Request $request)
@@ -374,7 +377,10 @@ class IpcrController extends Controller
             ->orderBy('description')
             ->get(['id', 'description', 'division']);
         
-        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section', 'status'));
+        $pmtBadges = app(\App\Services\PmtApprovalService::class)
+            ->badgeMap('ipcr', collect($staffData->items())->pluck('ipcr'));
+
+        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section', 'status', 'pmtBadges'));
     }
 
     public function getPending(Request $request)
