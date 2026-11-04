@@ -150,16 +150,16 @@ class IpcrService
             return $count > 0 ? $sum / $count : 0;
         };
 
-        $coreAvg = $calculateCategoryAverage($ipcr->coreFunctions);
-        $supportAvg = $calculateCategoryAverage($ipcr->supportFunctions);
-        $strategicAvg = $calculateCategoryAverage($ipcr->strategicFunctions);
+        $coreAvg = round($calculateCategoryAverage($ipcr->coreFunctions), 2);
+        $supportAvg = round($calculateCategoryAverage($ipcr->supportFunctions), 2);
+        $strategicAvg = round($calculateCategoryAverage($ipcr->strategicFunctions), 2);
 
         // User requested static distributions: Core-50%, Support-10%, Strategic-40%
         $coreDist = 0.50;
         $supportDist = 0.10;
         $strategicDist = 0.40;
 
-        $finalAvg = ($coreAvg * $coreDist) + ($supportAvg * $supportDist) + ($strategicAvg * $strategicDist);
+        $finalAvg = round($coreAvg * $coreDist, 2) + round($supportAvg * $supportDist, 2) + round($strategicAvg * $strategicDist, 2);
         
         $ipcr->final_average_rating = $finalAvg;
         $ipcr->final_rating = $finalAvg; // Usually the same unless there are deductions

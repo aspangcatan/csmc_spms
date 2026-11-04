@@ -84,13 +84,13 @@
         return $count > 0 ? $sum / $count : 0;
     };
 
-    $coreAvg = $calculateAverage($ipcr->coreFunctions);
-    $supportAvg = $calculateAverage($ipcr->supportFunctions);
-    $strategicAvg = $calculateAverage($ipcr->strategicFunctions);
+    $coreAvg = round($calculateAverage($ipcr->coreFunctions), 2);
+    $supportAvg = round($calculateAverage($ipcr->supportFunctions), 2);
+    $strategicAvg = round($calculateAverage($ipcr->strategicFunctions), 2);
 
-    $weightedCore = $coreAvg * 0.5;
-    $weightedSupport = $supportAvg * 0.1;
-    $weightedStrategic = $strategicAvg * 0.4;
+    $weightedCore = round($coreAvg * 0.5, 2);
+    $weightedSupport = round($supportAvg * 0.1, 2);
+    $weightedStrategic = round($strategicAvg * 0.4, 2);
     $finalScore = $weightedCore + $weightedSupport + $weightedStrategic;
 @endphp
 

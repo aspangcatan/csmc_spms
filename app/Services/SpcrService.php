@@ -193,13 +193,13 @@ class SpcrService
             return $ratings->count() > 0 ? $ratings->average() : 0;
         };
 
-        $coreAvg = $calculateAvg($spcr->coreEntries);
-        $supportAvg = $calculateAvg($spcr->supportEntries);
-        $strategicAvg = $calculateAvg($spcr->strategicEntries);
+        $coreAvg = round($calculateAvg($spcr->coreEntries), 2);
+        $supportAvg = round($calculateAvg($spcr->supportEntries), 2);
+        $strategicAvg = round($calculateAvg($spcr->strategicEntries), 2);
 
-        $finalAvg = ($coreAvg * ($spcr->core_dist / 100)) + 
-                    ($supportAvg * ($spcr->support_dist / 100)) + 
-                    ($strategicAvg * ($spcr->strategic_dist / 100));
+        $finalAvg = round($coreAvg * ($spcr->core_dist / 100), 2) +
+                    round($supportAvg * ($spcr->support_dist / 100), 2) +
+                    round($strategicAvg * ($spcr->strategic_dist / 100), 2);
 
         $spcr->final_average_rating = $finalAvg;
         $spcr->final_rating = $finalAvg;

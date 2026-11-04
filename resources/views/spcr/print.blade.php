@@ -278,17 +278,17 @@
                 'strategic' => $outputSpans($strategicEntries),
             ];
 
-            $coreAvg = $ratedAvg($coreEntries);
-            $supportAvg = $ratedAvg($supportEntries);
-            $strategicAvg = $ratedAvg($strategicEntries);
+            $coreAvg = round($ratedAvg($coreEntries), 2);
+            $supportAvg = round($ratedAvg($supportEntries), 2);
+            $strategicAvg = round($ratedAvg($strategicEntries), 2);
 
             $coreWeight = ((float) ($spcr->core_dist ?: 0)) / 100;
             $supportWeight = ((float) ($spcr->support_dist ?: 0)) / 100;
             $strategicWeight = ((float) ($spcr->strategic_dist ?: 0)) / 100;
 
-            $coreFinal = $coreAvg * $coreWeight;
-            $supportFinal = $supportAvg * $supportWeight;
-            $strategicFinal = $strategicAvg * $strategicWeight;
+            $coreFinal = round($coreAvg * $coreWeight, 2);
+            $supportFinal = round($supportAvg * $supportWeight, 2);
+            $strategicFinal = round($strategicAvg * $strategicWeight, 2);
 
             $finalAverage = $coreFinal + $supportFinal + $strategicFinal;
             $finalAdjective = $spcr->final_rating_adjective ?: 'N/A';
