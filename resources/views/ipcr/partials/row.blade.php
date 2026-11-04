@@ -25,6 +25,7 @@
         <textarea class="w-full border-0 bg-transparent text-[11px] p-0 resize-none focus:ring-0 placeholder-gray-300 !text-center" style="text-align: center !important;" rows="5" placeholder="Remarks..."></textarea>
     </td>
     <td class="p-2 text-center align-middle">
+        <input type="checkbox" class="row-select block mx-auto mb-2 w-4 h-4 rounded border-gray-300 text-red-500 cursor-pointer focus:ring-red-400" title="Select row">
         <button type="button" class="w-7 h-7 rounded-full flex items-center justify-center mx-auto text-red-400 hover:text-white hover:bg-red-500 transition-all shadow-sm border border-red-50 delete-row-btn">
             <i class="fas fa-trash-alt text-[10px]"></i>
         </button>

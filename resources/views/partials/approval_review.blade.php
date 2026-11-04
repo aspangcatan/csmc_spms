@@ -1,6 +1,7 @@
 {{--
     Shared review/approve/reject UI for approval queues.
-    Params: $decideUrl (POST endpoint taking type, decision, ids, remarks), $roleLabel (e.g. "PMT").
+    Params: $decideUrl (POST endpoint taking type, decision, ids, remarks, signature), $roleLabel (e.g. "PMT"),
+    $requireSignature (optional; approvals then need a drawn signature, printed in the CSMC PMT box).
     Expects per-type markup: .{type}-checkbox, #{type}SelectAll, #{type}BulkActions, .{type}-selected-count,
     and buttons calling openReview(type, id, name, period) / bulkDecide(type, decision).
 --}}
@@ -46,6 +47,19 @@
                     <textarea id="reviewRemarks" rows="4" maxlength="2000"
                               class="mt-2 w-full rounded-xl border-gray-200 text-sm focus:border-emerald-400 focus:ring-emerald-400"
                               placeholder="Enter remarks..."></textarea>
+                    @if(!empty($requireSignature))
+                        <div class="mt-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    Your Signature <span class="normal-case font-bold tracking-normal">(required to approve)</span>
+                                </p>
+                                <button type="button" onclick="reviewSignaturePad.clear()" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500">
+                                    Clear
+                                </button>
+                            </div>
+                            <canvas id="reviewSignature" class="mt-2 w-full h-28 rounded-xl border border-dashed border-gray-300 bg-white cursor-crosshair"></canvas>
+                        </div>
+                    @endif
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         <button type="button" onclick="submitReview('reject')"
                                 class="h-10 rounded-xl bg-white border border-red-200 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-50 transition-all shadow-sm flex items-center justify-center gap-2">
@@ -66,6 +80,7 @@
 <script>
     const decideUrl = @json($decideUrl);
     const roleLabel = @json($roleLabel);
+    const requireSignature = @json(!empty($requireSignature));
     const apiBaseUrls = {
         ipcr: @json(url('/api/ipcr')),
         spcr: @json(url('/api/spcr')),
@@ -121,8 +136,78 @@
         return $('<div>').text(text ?? '').html();
     }
 
-    function sendDecision(type, decision, ids, remarks) {
-        return postWithCsrf(decideUrl, { type, decision, ids, remarks: remarks || null })
+    // ── Signature pad (PMT approvals) ──────────────────────────────────────────
+
+    // The last signature drawn on this page, reused to pre-fill later approvals.
+    let lastSignature = null;
+
+    function createSignaturePad(canvas) {
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let dirty = false;
+
+        const point = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            return [e.clientX - rect.left, e.clientY - rect.top];
+        };
+
+        canvas.style.touchAction = 'none';
+        canvas.addEventListener('pointerdown', (e) => {
+            drawing = true;
+            dirty = true;
+            canvas.setPointerCapture(e.pointerId);
+            const [x, y] = point(e);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + 0.1, y + 0.1);
+            ctx.stroke();
+        });
+        canvas.addEventListener('pointermove', (e) => {
+            if (!drawing) return;
+            const [x, y] = point(e);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        });
+        ['pointerup', 'pointercancel'].forEach((name) => canvas.addEventListener(name, () => { drawing = false; }));
+
+        const pad = {
+            // Sizes the backing store to the displayed size; call once the canvas is visible. Clears it.
+            reset() {
+                const ratio = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                canvas.width = rect.width * ratio;
+                canvas.height = rect.height * ratio;
+                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#111827';
+                dirty = false;
+            },
+            clear() {
+                pad.reset();
+            },
+            load(dataUrl) {
+                if (!dataUrl) return;
+                const img = new Image();
+                img.onload = () => {
+                    const rect = canvas.getBoundingClientRect();
+                    ctx.drawImage(img, 0, 0, rect.width, rect.height);
+                    dirty = true;
+                };
+                img.src = dataUrl;
+            },
+            isEmpty: () => !dirty,
+            toDataURL: () => canvas.toDataURL('image/png'),
+        };
+        return pad;
+    }
+
+    const reviewSignaturePad = requireSignature ? createSignaturePad(document.getElementById('reviewSignature')) : null;
+
+    function sendDecision(type, decision, ids, remarks, signature = null) {
+        if (signature) lastSignature = signature;
+        return postWithCsrf(decideUrl, { type, decision, ids, remarks: remarks || null, signature })
             .then((data) => {
                 const verb = decision === 'approve' ? 'approved' : 'rejected';
                 if (data.failed.length) {
@@ -152,6 +237,10 @@
         $('#reviewPmtProgress').addClass('hidden').empty();
         $('#reviewModal').removeClass('hidden').addClass('flex');
         $('body').addClass('overflow-hidden');
+        if (reviewSignaturePad) {
+            reviewSignaturePad.reset();
+            reviewSignaturePad.load(lastSignature);
+        }
 
         fetch(`${apiBaseUrls[type]}/${id}`, { headers: { 'Accept': 'application/json' } })
             .then((res) => res.ok ? res.json() : null)
@@ -228,14 +317,23 @@
             return;
         }
 
+        let signature = null;
+        if (decision === 'approve' && reviewSignaturePad) {
+            if (reviewSignaturePad.isEmpty()) {
+                showAlert('Signature required', 'Please draw your signature before approving.', 'warning');
+                return;
+            }
+            signature = reviewSignaturePad.toDataURL();
+        }
+
         const label = type.toUpperCase();
         confirmAction(
             decision === 'approve' ? `Approve ${label}?` : `Reject ${label}?`,
             decision === 'approve'
-                ? `This will record ${roleLabel} approval for this ${label}.`
+                ? `This will record ${roleLabel} approval${signature ? ' and your signature' : ''} for this ${label}.`
                 : `This will return the ${label} to the employee for revision.`,
             decision === 'approve' ? 'APPROVE' : 'REJECT',
-            () => sendDecision(type, decision, [id], remarks)
+            () => sendDecision(type, decision, [id], remarks, signature)
         );
     }
 
@@ -255,12 +353,37 @@
 
         const label = type.toUpperCase();
         const isApprove = decision === 'approve';
+        const withSignature = isApprove && requireSignature;
+        let bulkPad = null;
 
         Swal.fire({
             title: isApprove ? `Bulk Approve ${label}?` : `Bulk Reject ${label}?`,
-            html: isApprove
+            html: (isApprove
                 ? `This will record ${roleLabel} approval for <b>${ids.length}</b> selected ${label} record(s).<br>The remarks below will be added to each record.`
-                : `This will return <b>${ids.length}</b> selected ${label} record(s) to the employees for revision.<br>The remarks below will be added to each record.`,
+                : `This will return <b>${ids.length}</b> selected ${label} record(s) to the employees for revision.<br>The remarks below will be added to each record.`)
+                + (withSignature
+                    ? `<div class="mt-4 text-left">
+                           <div class="flex items-center justify-between">
+                               <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Your signature (applied to each record)</span>
+                               <button type="button" id="bulkSignatureClear" class="text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-red-500">Clear</button>
+                           </div>
+                           <canvas id="bulkSignature" class="mt-2 w-full h-28 rounded-xl border border-dashed border-gray-300 bg-white cursor-crosshair"></canvas>
+                       </div>`
+                    : ''),
+            didOpen: () => {
+                if (!withSignature) return;
+                bulkPad = createSignaturePad(document.getElementById('bulkSignature'));
+                bulkPad.reset();
+                bulkPad.load(lastSignature);
+                document.getElementById('bulkSignatureClear').addEventListener('click', () => bulkPad.clear());
+            },
+            preConfirm: (value) => {
+                if (bulkPad && bulkPad.isEmpty()) {
+                    Swal.showValidationMessage('Please draw your signature before approving.');
+                    return false;
+                }
+                return { remarks: (value || '').trim(), signature: bulkPad ? bulkPad.toDataURL() : null };
+            },
             icon: 'warning',
             input: 'textarea',
             inputLabel: isApprove ? `${roleLabel} Remarks (optional)` : `${roleLabel} Remarks (required)`,
@@ -280,7 +403,7 @@
             },
             buttonsStyling: false
         }).then((result) => {
-            if (result.isConfirmed) sendDecision(type, decision, ids, result.value.trim());
+            if (result.isConfirmed) sendDecision(type, decision, ids, result.value.remarks, result.value.signature);
         });
     }
 </script>

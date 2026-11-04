@@ -111,6 +111,40 @@ class User extends Authenticatable
         } catch (\Exception $e) { return ''; }
     }
 
+    // Staff list search: every word must match the name, position, section or division.
+    public function scopeSearch($query, ?string $term)
+    {
+        $words = preg_split('/\s+/', trim((string) $term), -1, PREG_SPLIT_NO_EMPTY);
+        if (empty($words)) {
+            return $query;
+        }
+
+        $db = \Illuminate\Support\Facades\DB::connection('user');
+
+        foreach ($words as $word) {
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $word) . '%';
+            $designationIds = $db->table('designation')->where('description', 'like', $like)->pluck('id')->all();
+            $sectionIds = $db->table('section')
+                ->where(fn ($q) => $q->where('description', 'like', $like)->orWhere('code', 'like', $like))
+                ->pluck('id')->all();
+            $divisionIds = $db->table('division')
+                ->where(fn ($q) => $q->where('description', 'like', $like)->orWhere('code', 'like', $like))
+                ->pluck('id')->all();
+
+            $query->where(function ($q) use ($like, $designationIds, $sectionIds, $divisionIds) {
+                $q->where('fname', 'like', $like)
+                    ->orWhere('mname', 'like', $like)
+                    ->orWhere('lname', 'like', $like)
+                    ->orWhere('suffix', 'like', $like)
+                    ->orWhereIn('designation', $designationIds)
+                    ->orWhereIn('section', $sectionIds)
+                    ->orWhereIn('division', $divisionIds);
+            });
+        }
+
+        return $query;
+    }
+
     public function getHighestSupervisor(): string
     {
         try {
@@ -163,6 +197,27 @@ class User extends Authenticatable
     {
         return \Illuminate\Support\Facades\DB::connection('user')
             ->table('section')
+            ->where('head', $this->id)
+            ->whereNotNull('subsection')
+            ->whereNotIn('subsection', ['', '0'])
+            ->exists();
+    }
+
+    // Heads the unit (a section with a parent section) that $ownerId belongs to.
+    public function isUnitHeadOf($ownerId): bool
+    {
+        if ((int) $ownerId === (int) $this->id) {
+            return false;
+        }
+
+        $owner = self::find($ownerId);
+        if (!$owner || !$owner->section) {
+            return false;
+        }
+
+        return \Illuminate\Support\Facades\DB::connection('user')
+            ->table('section')
+            ->where('id', $owner->section)
             ->where('head', $this->id)
             ->whereNotNull('subsection')
             ->whereNotIn('subsection', ['', '0'])

@@ -9,23 +9,19 @@
             <h1 class="text-2xl font-black text-gray-900 tracking-tight">PMT Approvals</h1>
             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Final Approval Queue for IPCR and SPCR</p>
         </div>
-        <div class="bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-            <div>
-                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Fiscal Year</p>
-                <select id="yearFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
-                    @php $currentYear = date('Y'); @endphp
-                    @for($y = $currentYear; $y >= $currentYear - 5; $y--)
-                        <option value="{{ $y }}" {{ (int)$year === (int)$y ? 'selected' : '' }}>{{ $y }}</option>
-                    @endfor
-                </select>
-            </div>
-            <div class="h-8 w-px bg-gray-100"></div>
-            <div class="text-right">
+        <div class="flex items-center gap-3">
+            <a href="{{ route('pmt.dashboard', request()->query()) }}"
+               class="px-4 py-2.5 rounded-2xl bg-white border border-gray-100 shadow-sm text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-orange-500 transition-all flex items-center gap-2">
+                <i class="fas fa-chart-bar"></i> Dashboard
+            </a>
+            <div class="bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm text-right">
                 <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Pending</p>
                 <p class="text-sm font-black text-gray-900 leading-none">{{ $pendingIpcrs->count() + $pendingSpcrs->count() }}</p>
             </div>
         </div>
     </div>
+
+    @include('pmt.partials.filters', ['action' => route('pmt.approvals')])
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="card-modern p-6 border-0">
@@ -83,7 +79,7 @@
                                 <p class="text-[10px] text-gray-400 font-medium">{{ $ipcr->user->division_name ?? '' }}</p>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-xs font-bold text-gray-700">FY {{ $ipcr->year }} - {{ $ipcr->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                                <p class="text-xs font-bold text-gray-700">FY {{ $ipcr->year }} - {{ Period::shortLabel($ipcr->semester) }}</p>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
@@ -101,7 +97,7 @@
                                         <i class="fas fa-print"></i>
                                     </a>
                                     <button type="button"
-                                            onclick="openReview('ipcr', {{ $ipcr->id }}, @js($ipcr->user->name ?? 'Unknown User'), @js('FY ' . $ipcr->year . ' - ' . ($ipcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            onclick="openReview('ipcr', {{ $ipcr->id }}, @js($ipcr->user->name ?? 'Unknown User'), @js('FY ' . $ipcr->year . ' - ' . Period::shortLabel($ipcr->semester)))"
                                             class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
                                             title="View details, add remarks, approve or reject">
                                         <i class="fas fa-eye"></i> Review
@@ -166,7 +162,7 @@
                                 <p class="text-[10px] text-gray-400 font-medium">{{ $spcr->user->division_name ?? '' }}</p>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-xs font-bold text-gray-700">FY {{ $spcr->year }} - {{ $spcr->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                                <p class="text-xs font-bold text-gray-700">FY {{ $spcr->year }} - {{ Period::shortLabel($spcr->semester) }}</p>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
@@ -184,7 +180,7 @@
                                         <i class="fas fa-print"></i>
                                     </a>
                                     <button type="button"
-                                            onclick="openReview('spcr', {{ $spcr->id }}, @js($spcr->user->name ?? 'Unknown User'), @js('FY ' . $spcr->year . ' - ' . ($spcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            onclick="openReview('spcr', {{ $spcr->id }}, @js($spcr->user->name ?? 'Unknown User'), @js('FY ' . $spcr->year . ' - ' . Period::shortLabel($spcr->semester)))"
                                             class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
                                             title="View details, add remarks, approve or reject">
                                         <i class="fas fa-eye"></i> Review
@@ -205,13 +201,5 @@
     </div>
 </div>
 
-@include('partials.approval_review', ['decideUrl' => route('pmt.decide'), 'roleLabel' => 'PMT'])
+@include('partials.approval_review', ['decideUrl' => route('pmt.decide'), 'roleLabel' => 'PMT', 'requireSignature' => true])
 @endsection
-
-@push('scripts')
-<script>
-    $('#yearFilter').on('change', function () {
-        window.location.href = `{{ route('pmt.approvals') }}?year=${$(this).val()}`;
-    });
-</script>
-@endpush

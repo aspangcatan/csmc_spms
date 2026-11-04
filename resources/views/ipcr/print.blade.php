@@ -240,10 +240,6 @@
             z-index: 1000;
         }
 
-        .pmt-stamp img {
-            width: 180px;
-            height: auto;
-        }
     </style>
 </head>
 
@@ -669,7 +665,7 @@ Name of Employee: <span
             </table>
             <!-- PMT Stamp -->
             <div class="pmt-stamp">
-                <img src="{{ asset('img/img_pmt.png') }}" alt="PMT Stamp">
+                @include('partials.pmt_signature_box', ['signatures' => $pmtSignatures, 'record' => $ipcr])
             </div>
         </div>
     </div>

@@ -76,10 +76,9 @@
                             </select>
                         </div>
                         <div class="flex-1 sm:flex-none">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Semester</label>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Period</label>
                             <select id="semesterFilter" class="form-select text-sm border-gray-200 rounded-lg focus:ring-orange-200 focus:border-orange-500 w-full">
-                                <option value="1">1st Semester</option>
-                                <option value="2">2nd Semester</option>
+                                @include('partials.period_options', ['selected' => $semester])
                             </select>
                         </div>
                     </div>
@@ -106,7 +105,7 @@
                     <div class="text-center text-gray-300 text-sm py-12">
                         <i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i>
                         <p class="font-medium">No SPCR selected for this period.</p>
-                        <p class="text-xs">Select a year and semester to view history.</p>
+                        <p class="text-xs">Select a year and period to view history.</p>
                     </div>
                 </div>
             </div>
@@ -123,8 +122,8 @@
     window.spcrApiBaseUrl = window.spcrApiBaseUrl || @json(url('/api/spcr'));
     window.spcrBySemesterUrl = window.spcrBySemesterUrl || @json(url('/api/spcr/by-semester'));
     let currentSpcrId = null;
-    let currentYear = new Date().getFullYear();
-    let currentSemester = new Date().getMonth() < 6 ? 1 : 2;
+    let currentYear = {{ (int) $year }};
+    let currentSemester = {{ (int) $semester }};
 
     $(document).ready(function () {
         // Initialize filters
@@ -142,7 +141,7 @@
             if (currentSpcrId) {
                 viewSpcr(currentSpcrId);
             } else {
-                showAlert('No Document', 'No SPCR found for the selected year and semester.', 'info');
+                showAlert('No Document', 'No SPCR found for the selected year and period.', 'info');
             }
         });
 
@@ -239,13 +238,13 @@
 
     function displayNoSpcrMessage() {
         $('#spcrLogsContainer').html(
-            '<div class="text-center text-gray-300 text-sm py-12"><i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i><p class="font-medium">No SPCR found for this period.</p><p class="text-xs">Click CREATE SPCR to get started or select another semester.</p></div>'
+            '<div class="text-center text-gray-300 text-sm py-12"><i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i><p class="font-medium">No SPCR found for this period.</p><p class="text-xs">Click CREATE SPCR to get started or select another period.</p></div>'
         );
     }
 
     function deleteSpcr() {
         if (!currentSpcrId) {
-            showAlert('Action Required', 'No SPCR found for the selected year and semester.', 'info');
+            showAlert('Action Required', 'No SPCR found for the selected year and period.', 'info');
             return;
         }
 

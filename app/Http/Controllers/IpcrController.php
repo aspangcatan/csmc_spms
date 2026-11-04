@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Ipcr;
+use App\Support\Period;
 use Illuminate\Support\Facades\DB;
 use App\Services\IpcrService;
 use App\Services\SpcrService;
@@ -38,7 +39,7 @@ class IpcrController extends Controller
             'ipcr.supervisor_id' => 'nullable|integer', // Made nullable in case table lookup fails? Orig was required. 
                                                         // I'll keep it nullable to avoid hard crash, but logic says it should depend on section.
             'ipcr.year' => 'required|integer',
-            'ipcr.semester' => 'required|integer|in:1,2',
+            'ipcr.semester' => 'required|integer|' . Period::rule(),
             'ipcr.section_head' => 'nullable|integer',
             'ipcr.division_head' => 'nullable|integer',
             'ipcr.highest_supervisor' => 'nullable|integer',
@@ -53,7 +54,7 @@ class IpcrController extends Controller
             'ipcr.strategic_percentage_distribution' => 'nullable|numeric|min:0|max:100',
 
             'core_functions' => 'array',
-            'core_functions.*.output' => 'required_with:core_functions|string',
+            'core_functions.*.output' => 'nullable|string',
             'core_functions.*.success_indicator' => 'nullable|string',
             'core_functions.*.actual_accomplishment' => 'nullable|string',
             'core_functions.*.quantity_rating' => 'nullable|numeric|min:1|max:5',
@@ -78,8 +79,10 @@ class IpcrController extends Controller
             'strategic_functions.*.efficiency_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.timeliness_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.remarks' => 'nullable|string',
+
+            'draft' => 'sometimes|boolean',
         ]);
-        $this->sanitizeAndValidateFunctionGroups($validated);
+        $this->sanitizeAndValidateFunctionGroups($validated, $request->boolean('draft'));
         // IPCRs are always created for the logged-in user.
         $validated['ipcr']['userid'] = auth()->id();
 
@@ -112,7 +115,7 @@ class IpcrController extends Controller
             'ipcr.userid' => 'sometimes|integer',
             'ipcr.supervisor_id' => 'sometimes|nullable|integer',
             'ipcr.year' => 'sometimes|integer',
-            'ipcr.semester' => 'sometimes|integer|in:1,2',
+            'ipcr.semester' => 'sometimes|integer|' . Period::rule(),
             'ipcr.section_head' => 'nullable|integer',
             'ipcr.division_head' => 'nullable|integer',
             'ipcr.highest_supervisor' => 'nullable|integer',
@@ -128,7 +131,7 @@ class IpcrController extends Controller
 
             'core_functions' => 'array',
             'core_functions.*.id' => 'nullable|integer',
-            'core_functions.*.output' => 'required_with:core_functions|string',
+            'core_functions.*.output' => 'nullable|string',
             'core_functions.*.success_indicator' => 'nullable|string',
             'core_functions.*.actual_accomplishment' => 'nullable|string',
             'core_functions.*.quantity_rating' => 'nullable|numeric|min:1|max:5',
@@ -155,8 +158,10 @@ class IpcrController extends Controller
             'strategic_functions.*.efficiency_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.timeliness_rating' => 'nullable|numeric|min:1|max:5',
             'strategic_functions.*.remarks' => 'nullable|string',
+
+            'draft' => 'sometimes|boolean',
         ]);
-        $this->sanitizeAndValidateFunctionGroups($validated);
+        $this->sanitizeAndValidateFunctionGroups($validated, $request->boolean('draft'));
 
         if (isset($validated['ipcr'])) {
             // Ownership never changes through an update.
@@ -222,7 +227,8 @@ class IpcrController extends Controller
     {
         $this->authorizeIpcrView($id);
         $ipcr = $this->ipcrService->getById($id);
-        return view('ipcr.print', compact('ipcr'));
+        $pmtSignatures = app(\App\Services\PmtApprovalService::class)->signaturesFor('ipcr', $ipcr);
+        return view('ipcr.print', compact('ipcr', 'pmtSignatures'));
     }
 
 
@@ -232,7 +238,7 @@ class IpcrController extends Controller
         $user = auth()->user();
         
         $year = $request->query('year', date('Y'));
-        $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
+        $semester = $request->query('semester', Period::current());
 
         // 1. Period-Specific IPCR (Affected by Filters)
         // This will be used for "Latest Rating", "Period Status", and "Quick Action"
@@ -352,16 +358,18 @@ class IpcrController extends Controller
         }
 
         $year     = $request->query('year', date('Y'));
-        $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
+        $semester = $request->query('semester', Period::current());
         $division = $request->query('division');
         $section  = $request->query('section');
         $status   = $request->query('status');
+        $search   = trim((string) $request->query('search', ''));
         $perPage  = 10;
 
         $staffData = $this->ipcrService->getStaffStatusList(auth()->id(), $year, $semester, [
             'division' => $division,
             'section'  => $section,
             'status'   => $status,
+            'search'   => $search,
         ], $perPage);
 
         $divisions = DB::connection('user')
@@ -380,7 +388,17 @@ class IpcrController extends Controller
         $pmtBadges = app(\App\Services\PmtApprovalService::class)
             ->badgeMap('ipcr', collect($staffData->items())->pluck('ipcr'));
 
-        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section', 'status', 'pmtBadges'));
+        // Units this user heads; their staff's IPCRs get the "Mark Reviewed" action.
+        $headedUnitIds = DB::connection('user')
+            ->table('section')
+            ->where('head', $user->id)
+            ->whereNotNull('subsection')
+            ->whereNotIn('subsection', ['', '0'])
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return view('ipcr.staff', compact('staffData', 'year', 'semester', 'divisions', 'sections', 'division', 'section', 'status', 'search', 'pmtBadges', 'headedUnitIds'));
     }
 
     public function getPending(Request $request)
@@ -414,6 +432,35 @@ class IpcrController extends Controller
         return response()->json($ipcr);
     }
 
+    // The Unit Head marks a staff IPCR as reviewed. Informational only: the approval status doesn't change.
+    public function markReviewed(Request $request, $id)
+    {
+        $ipcr = Ipcr::findOrFail($id);
+        if (!auth()->user()->isUnitHeadOf($ipcr->userid)) {
+            return response()->json(['message' => 'Unauthorized. Only the Unit Head of this employee can mark it as reviewed.'], 403);
+        }
+        if (str_starts_with($ipcr->status, 'Draft')) {
+            return response()->json(['message' => 'Only submitted IPCRs can be marked as reviewed.'], 422);
+        }
+
+        $validated = $request->validate(['remarks' => 'nullable|string|max:2000']);
+        $remarks = trim($validated['remarks'] ?? '') ?: null;
+
+        $ipcr->update([
+            'unit_head_reviewed_by' => auth()->id(),
+            'unit_head_reviewed_at' => now(),
+            'unit_head_review_remarks' => $remarks,
+        ]);
+
+        $ipcr->logs()->create([
+            'subject' => 'Reviewed by Unit Head',
+            'content' => "Marked as reviewed at status '{$ipcr->status}'." . ($remarks ? " Remarks: {$remarks}" : ''),
+            'updated_by' => auth()->id(),
+        ]);
+
+        return response()->json($ipcr->load('unitHeadReviewer'));
+    }
+
     public function getByYearSemester(Request $request)
     {
         $userId = $request->query('user_id', auth()->id());
@@ -439,7 +486,8 @@ class IpcrController extends Controller
         return response()->json($this->ipcrService->getSupervisors());
     }
 
-    protected function sanitizeAndValidateFunctionGroups(array &$validated): void
+    // Drafts only drop empty rows; the required-entry checks run when the form is saved for real or submitted.
+    protected function sanitizeAndValidateFunctionGroups(array &$validated, bool $isDraft = false): void
     {
         $groups = [
             'core_functions' => 'Core Functions',
@@ -455,6 +503,10 @@ class IpcrController extends Controller
                 return !$this->isEmptyFunctionRow((array) $row);
             }));
             $validated[$key] = $rows;
+
+            if ($isDraft) {
+                continue;
+            }
 
             if (count($rows) < 1) {
                 $errors[$key] = ["At least one {$label} entry is required before saving."];

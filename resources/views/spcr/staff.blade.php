@@ -73,7 +73,7 @@
     <div class="mb-6 flex flex-col sm:flex-row gap-4">
         <div class="relative flex-grow">
             <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-300"></i>
-            <input type="text" id="staffSearch" placeholder="Search division head or division name..." 
+            <input type="text" id="staffSearch" value="{{ $search }}" placeholder="Search name, section or division... (press Enter)"
                    class="w-full pl-12 pr-5 py-4 bg-white border border-gray-100 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-orange-50 focus:bg-white focus:border-orange-500 outline-none transition-all shadow-sm">
         </div>
         
@@ -116,7 +116,7 @@
                             </td>
                             <td class="px-6 py-5">
                                 @if($data['spcr'])
-                                    <p class="text-xs font-bold text-gray-700">FY {{ $data['spcr']->year }} - {{ $data['spcr']->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                                    <p class="text-xs font-bold text-gray-700">FY {{ $data['spcr']->year }} - {{ Period::shortLabel($data['spcr']->semester) }}</p>
                                 @else
                                     <p class="text-xs font-bold text-gray-300 italic uppercase">Not Started</p>
                                 @endif
@@ -216,13 +216,9 @@
     }
     
     $(document).ready(function() {
-        // Search functionality
-        $('#staffSearch').on('keyup', function() {
-            const value = $(this).val().toLowerCase();
-            $(".staff-row").filter(function() {
-                const text = $(this).text().toLowerCase();
-                $(this).toggle(text.indexOf(value) > -1);
-            });
+        // Search runs on the server so it covers every page, not just the 10 rows shown.
+        $('#staffSearch').on('keydown', function(e) {
+            if (e.key === 'Enter') applyFilters(false);
         });
 
         function applyFilters(resetSection = false) {
@@ -230,11 +226,13 @@
             const division = $('#divisionFilter').val();
             const section  = resetSection ? '' : $('#sectionFilter').val();
             const status   = $('#statusFilter').val();
+            const search   = $('#staffSearch').val().trim();
             const params   = new URLSearchParams({ year });
 
             if (division) params.set('division', division);
             if (section)  params.set('section', section);
             if (status)   params.set('status', status);
+            if (search)   params.set('search', search);
 
             window.location.href = `{{ route('spcr.staff') }}?${params.toString()}`;
         }

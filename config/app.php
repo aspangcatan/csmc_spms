@@ -191,7 +191,7 @@ return [
     */
 
     'aliases' => Facade::defaultAliases()->merge([
-        // ...
+        'Period' => App\Support\Period::class,
     ])->toArray(),
 
 ];

@@ -6,6 +6,7 @@ use App\Services\SpcrService;
 use Illuminate\Http\Request;
 use App\Models\Spcr;
 use App\Models\SpcrEntry;
+use App\Support\Period;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +26,7 @@ class SpcrController extends Controller
         }
 
         $year = $request->query('year', date('Y'));
-        $semester = $request->query('semester', (date('n') <= 6 ? 1 : 2));
+        $semester = $request->query('semester', Period::current());
         $user = auth()->user();
         
         $spcrs = Spcr::where('userid', $user->id)
@@ -41,7 +42,7 @@ class SpcrController extends Controller
     {
         $validated = $request->validate([
             'year' => 'required|integer',
-            'semester' => 'required|integer|in:1,2',
+            'semester' => 'required|integer|' . Period::rule(),
             'period_from' => 'nullable|date',
             'period_to' => 'nullable|date',
             'spcr_date' => 'nullable|date',
@@ -183,12 +184,14 @@ class SpcrController extends Controller
         $division = $request->query('division');
         $section  = $request->query('section');
         $status   = $request->query('status');
+        $search   = trim((string) $request->query('search', ''));
         $perPage  = 10;
 
         $staffData = $this->spcrService->getStaffStatusList(auth()->id(), $year, null, [
             'division' => $division,
             'section'  => $section,
             'status'   => $status,
+            'search'   => $search,
         ], $perPage);
 
         $divisions = DB::connection('user')
@@ -207,7 +210,7 @@ class SpcrController extends Controller
         $pmtBadges = app(\App\Services\PmtApprovalService::class)
             ->badgeMap('spcr', collect($staffData->items())->pluck('spcr'));
 
-        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section', 'status', 'pmtBadges'));
+        return view('spcr.staff', compact('staffData', 'year', 'divisions', 'sections', 'division', 'section', 'status', 'search', 'pmtBadges'));
     }
 
     public function print($id)
@@ -215,7 +218,8 @@ class SpcrController extends Controller
         $spcr = Spcr::with(['user', 'entries', 'supervisor', 'divisionHead', 'highestSupervisor', 'pmt'])->findOrFail($id);
         $this->authorizeSpcrView($spcr);
         $viewName = $this->resolveSpcrPrintView($spcr->userid);
-        return view($viewName, compact('spcr'));
+        $pmtSignatures = app(\App\Services\PmtApprovalService::class)->signaturesFor('spcr', $spcr);
+        return view($viewName, compact('spcr', 'pmtSignatures'));
     }
 
     protected function resolveSpcrPrintView($creatorId): string

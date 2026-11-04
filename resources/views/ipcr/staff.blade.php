@@ -27,8 +27,7 @@
                 <div>
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Semester</p>
                     <select id="semesterFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer">
-                        <option value="1" {{ (int) $semester === 1 ? 'selected' : '' }}>1st Sem</option>
-                        <option value="2" {{ (int) $semester === 2 ? 'selected' : '' }}>2nd Sem</option>
+                        @include('partials.period_options', ['selected' => $semester, 'short' => true])
                     </select>
                 </div>
                 <div class="h-8 w-px bg-gray-100"></div>
@@ -81,7 +80,7 @@
     <div class="mb-6 flex flex-col sm:flex-row gap-4">
         <div class="relative flex-grow">
             <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-gray-300"></i>
-            <input type="text" id="staffSearch" placeholder="Search employee name, position or section..." 
+            <input type="text" id="staffSearch" value="{{ $search }}" placeholder="Search employee name, position or section... (press Enter)"
                    class="w-full pl-12 pr-5 py-4 bg-white border border-gray-100 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-orange-50 focus:bg-white focus:border-orange-500 outline-none transition-all shadow-sm">
         </div>
         
@@ -148,10 +147,23 @@
                                         {{ $pmtBadges[$data['ipcr']->id] }}
                                     </span>
                                 @endif
+                                @if($data['ipcr'] && $data['ipcr']->unit_head_reviewed_at)
+                                    <span class="mt-1.5 inline-flex items-center gap-1 py-1 px-2.5 rounded-full bg-teal-50 text-teal-600 ring-1 ring-inset ring-teal-100 text-[9px] font-black uppercase tracking-widest"
+                                          title="{{ trim('Reviewed by ' . ($data['ipcr']->unitHeadReviewer->name ?? 'Unit Head') . ' on ' . $data['ipcr']->unit_head_reviewed_at->format('M d, Y g:i A') . ($data['ipcr']->unit_head_review_remarks ? '. Remarks: ' . $data['ipcr']->unit_head_review_remarks : '')) }}">
+                                        <i class="fas fa-user-check"></i> Reviewed by Unit Head · {{ $data['ipcr']->unit_head_reviewed_at->format('M d') }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-8 py-5 text-right">
                                 <div class="flex justify-end gap-2">
                                     @if($data['ipcr'])
+                                        @if(in_array((int) $data['user']->section, $headedUnitIds, true) && !str_starts_with($data['ipcr']->status, 'Draft'))
+                                        <button onclick="markUnitHeadReviewed({{ $data['ipcr']->id }}, @js($data['user']->name))"
+                                                class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-teal-500 hover:border-teal-100 transition-all shadow-sm"
+                                                title="{{ $data['ipcr']->unit_head_reviewed_at ? 'Mark Reviewed again' : 'Mark as Reviewed (Unit Head)' }}">
+                                            <i class="fas fa-user-check"></i>
+                                        </button>
+                                        @endif
                                         @if(auth()->user()->canEditIpcr($data['ipcr']))
                                         <button onclick="editStaffIpcr({{ $data['ipcr']->id }})"
                                                 class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-green-500 hover:border-green-100 transition-all shadow-sm"
@@ -211,27 +223,25 @@
 <script>
     window.IPCR_CONTEXT = 'staff';
     $(document).ready(function() {
-        // Search functionality
-        $('#staffSearch').on('keyup', function() {
-            const value = $(this).val().toLowerCase();
-            $(".staff-row").filter(function() {
-                const text = $(this).text().toLowerCase();
-                $(this).toggle(text.indexOf(value) > -1);
-            });
+        // Search runs on the server so it covers every page, not just the 10 rows shown.
+        $('#staffSearch').on('keydown', function(e) {
+            if (e.key === 'Enter') applyFilters(false);
         });
 
-        // Year + semester filter
+        // Year + period filter
         function applyFilters(resetSection = false) {
             const year     = $('#yearFilter').val();
             const semester = $('#semesterFilter').val();
             const division = $('#divisionFilter').val();
             const section  = resetSection ? '' : $('#sectionFilter').val();
             const status   = $('#statusFilter').val();
+            const search   = $('#staffSearch').val().trim();
             const params   = new URLSearchParams({ year, semester });
 
             if (division) params.set('division', division);
             if (section)  params.set('section', section);
             if (status)   params.set('status', status);
+            if (search)   params.set('search', search);
 
             window.location.href = `{{ route('ipcr.staff') }}?${params.toString()}`;
         }
@@ -248,6 +258,47 @@
             applyFilters(false);
         });
     });
+
+    // Unit Head review mark: informational, doesn't move the IPCR through the approval workflow.
+    function markUnitHeadReviewed(id, employeeName) {
+        Swal.fire({
+            title: 'Mark as Reviewed?',
+            html: `Record that you, as Unit Head, have reviewed the IPCR of <b>${$('<div>').text(employeeName).html()}</b>.<br>This does not approve or change its status.`,
+            icon: 'question',
+            input: 'textarea',
+            inputLabel: 'Remarks (optional)',
+            inputPlaceholder: 'Enter remarks...',
+            inputAttributes: { maxlength: 2000 },
+            showCancelButton: true,
+            confirmButtonText: 'MARK REVIEWED',
+            cancelButtonText: 'CANCEL',
+            customClass: {
+                popup: 'swal2-popup-modern shadow-2xl border border-gray-100',
+                title: 'swal2-title-modern',
+                confirmButton: 'swal2-confirm-modern mx-2',
+                cancelButton: 'btn-outline-modern mx-2 px-6 py-2 text-[11px] uppercase tracking-widest'
+            },
+            buttonsStyling: false
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            fetch(`${window.ipcrApiBaseUrl}/${id}/review`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ remarks: result.value.trim() || null })
+            })
+            .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.message || 'Failed to mark as reviewed.');
+                toast('Marked as reviewed.');
+                window.location.reload();
+            })
+            .catch((err) => showAlert('Error', err.message, 'error'));
+        });
+    }
 
     function viewStaffIpcr(id) {
         if (typeof loadIPCR === 'function') {

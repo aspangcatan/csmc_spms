@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Ipcr;
+use App\Support\Period;
 use Illuminate\Support\Facades\DB;
 
 class IpcrService
@@ -99,11 +100,12 @@ class IpcrService
 
             // Log the creation
             $semester = $ipcrData['semester'] ?? 1;
-            $logSubject = $semester == 1 ? 'IPCR Target Created' : 'IPCR Accomplishment Created';
-            
+            $logSubject = $semester == 2 ? 'IPCR Accomplishment Created' : 'IPCR Target Created';
+            $periodLabel = Period::label($semester);
+
             $ipcr->logs()->create([
                 'subject' => $logSubject,
-                'content' => "IPCR form created for Year {$ipcrData['year']} Semester {$semester}.",
+                'content' => "IPCR form created for Year {$ipcrData['year']} {$periodLabel}.",
                 'updated_by' => $ipcrData['userid'] ?? null,
             ]);
 
@@ -341,7 +343,8 @@ class IpcrService
     }
 
     // $comments is the supervisor feedback printed on the form; $remarks only goes to the log.
-    public function approveIpcr($id, $userId, $comments = null, $remarks = null)
+    // $signature is required at the PMT stage and prints in the CSMC PMT box.
+    public function approveIpcr($id, $userId, $comments = null, $remarks = null, $signature = null)
     {
         $ipcr = Ipcr::findOrFail($id);
         $oldStatus = $ipcr->status;
@@ -365,7 +368,7 @@ class IpcrService
             if (!$isPmtUser) throw new \Exception("Only PMT can approve this stage.");
 
             // Every PMT member must approve; the status only moves on the last approval.
-            [$approved, $total] = app(PmtApprovalService::class)->approve('ipcr', (int) $ipcr->id, (int) $userId);
+            [$approved, $total] = app(PmtApprovalService::class)->approve('ipcr', (int) $ipcr->id, (int) $userId, $signature);
             if ($approved < $total) {
                 $ipcr->logs()->create([
                     'subject' => "PMT Approval ({$approved}/{$total})",
@@ -549,6 +552,8 @@ class IpcrService
         if (!empty($sectionId)) {
             $staffQuery->where('section', $sectionId);
         }
+
+        $staffQuery->search($filters['search'] ?? null);
 
         if (!$isAdmin) {
             // Find sections where the user is the head.

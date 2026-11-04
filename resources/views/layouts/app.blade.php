@@ -350,6 +350,10 @@
         @endif
 
         @if(auth()->user()->isPmt())
+        <a href="{{ route('pmt.dashboard') }}" class="sidebar-item {{ Request::routeIs('pmt.dashboard') ? 'active' : '' }}">
+            <i class="fas fa-chart-bar"></i>
+            <span>PMT Dashboard</span>
+        </a>
         <a href="{{ route('pmt.approvals') }}" class="sidebar-item {{ Request::routeIs('pmt.approvals') ? 'active' : '' }}">
             <i class="fas fa-stamp"></i>
             <span>PMT Approvals</span>
@@ -583,6 +587,23 @@
             },
             buttonsStyling: false
         });
+    };
+
+    // ✅ Rating periods (semesters and quarters), mirrored from App\Support\Period
+    window.PERIODS = @json(\App\Support\Period::forJs());
+
+    window.periodLabel = (code, short = false) => {
+        const period = window.PERIODS[code];
+        if (!period) return 'Unknown Period';
+        return short ? period.short : period.label;
+    };
+
+    // Returns { from, to } as Y-m-d strings for the period in the given year.
+    window.periodRange = (year, code) => {
+        const [start, end] = (window.PERIODS[code] || window.PERIODS[1]).months;
+        const pad = (n) => String(n).padStart(2, '0');
+        const lastDay = new Date(year, end, 0).getDate();
+        return { from: `${year}-${pad(start)}-01`, to: `${year}-${pad(end)}-${pad(lastDay)}` };
     };
 
     (function () {

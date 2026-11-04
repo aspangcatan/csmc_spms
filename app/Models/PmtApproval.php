@@ -10,6 +10,7 @@ class PmtApproval extends Model
         'record_type',
         'record_id',
         'user_id',
+        'signature',
     ];
 
     public function user()

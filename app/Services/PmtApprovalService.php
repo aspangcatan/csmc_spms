@@ -12,16 +12,18 @@ class PmtApprovalService
     protected $memberIds = null;
 
     // All users with PMT level in the user DB; the PMT phase is complete once each of them approves.
+    // Privileges left behind by deleted accounts are ignored, since nobody could approve as them.
     public function memberIds(): array
     {
         if ($this->memberIds === null) {
             try {
                 $this->memberIds = DB::connection('user')
                     ->table('user_priv')
-                    ->where('syscode', 'e-spms')
-                    ->where('level', 'PMT')
+                    ->join('users', 'users.id', '=', 'user_priv.user_id')
+                    ->where('user_priv.syscode', 'e-spms')
+                    ->where('user_priv.level', 'PMT')
                     ->distinct()
-                    ->pluck('user_id')
+                    ->pluck('user_priv.user_id')
                     ->map(fn ($id) => (int) $id)
                     ->all();
             } catch (\Exception $e) {
@@ -97,11 +99,15 @@ class PmtApprovalService
         })->all();
     }
 
-    // Records one member's approval and returns [approvedCount, total].
-    public function approve(string $type, int $recordId, int $userId): array
+    // Records one member's signed approval and returns [approvedCount, total].
+    public function approve(string $type, int $recordId, int $userId, ?string $signature = null): array
     {
         if (!in_array($userId, $this->memberIds(), true)) {
             throw new \Exception('Only PMT members can approve this stage.');
+        }
+
+        if (!self::isValidSignature($signature)) {
+            throw new \Exception('PMT approval requires your signature. Approve from the PMT Approvals page.');
         }
 
         $exists = PmtApproval::where('record_type', $type)
@@ -112,11 +118,38 @@ class PmtApprovalService
             throw new \Exception('You have already approved this record.');
         }
 
-        PmtApproval::create(['record_type' => $type, 'record_id' => $recordId, 'user_id' => $userId]);
+        PmtApproval::create(['record_type' => $type, 'record_id' => $recordId, 'user_id' => $userId, 'signature' => $signature]);
 
         $approved = count($this->approverIdsFor($type, [$recordId])[$recordId] ?? []);
 
         return [$approved, count($this->memberIds())];
+    }
+
+    // Signatures are drawn on a canvas and sent as a PNG data URL.
+    public static function isValidSignature(?string $signature): bool
+    {
+        return is_string($signature)
+            && strlen($signature) <= 500000
+            && preg_match('#^data:image/png;base64,[A-Za-z0-9+/]+=*$#', $signature) === 1;
+    }
+
+    // Signed PMT approvals of a record in signing order, for the CSMC PMT box on the print forms.
+    public function signaturesFor(string $type, $record)
+    {
+        $approvals = PmtApproval::where('record_type', $type)
+            ->where('record_id', $record->id)
+            ->orderBy('created_at')
+            ->get(['user_id', 'signature', 'created_at']);
+
+        $names = User::whereIn('id', $approvals->pluck('user_id'))
+            ->get(['id', 'fname', 'mname', 'lname', 'suffix'])
+            ->mapWithKeys(fn ($user) => [$user->id => $user->name]);
+
+        return $approvals->map(fn ($approval) => (object) [
+            'name'      => $names[$approval->user_id] ?? "User #{$approval->user_id}",
+            'signature' => $approval->signature,
+            'signed_at' => $approval->created_at,
+        ]);
     }
 
     // A rejection restarts the PMT phase, so the next submission needs every member again.

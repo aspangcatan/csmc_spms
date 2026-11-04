@@ -72,6 +72,8 @@
                     <input type="hidden" id="statusValue" value="Draft Target">
 
 
+                    @include('partials.row_bulk_delete', ['modalId' => 'spcrModal'])
+
                     {{-- SPCR Table --}}
                     <div class="card-modern overflow-hidden border-0">
                         <table class="w-full text-[11px]">
@@ -197,6 +199,10 @@
                             <button id="approveBtn" class="btn btn-orange bg-emerald-500 hover:bg-emerald-600 px-8 py-3 shadow-lg shadow-emerald-500/20" style="display: none;" onclick="approveSpcr()">
                                 Approve Document
                             </button>
+                            <button id="saveDraftBtn" class="btn btn-outline-modern bg-white border-gray-200 px-6 py-3" style="display: none;" onclick="saveSpcr(false, true)"
+                                    title="Save your entries without submitting them for review">
+                                <i class="fas fa-save mr-2 opacity-50"></i> Save as Draft
+                            </button>
                             <button id="handleSaveBtn" class="btn btn-orange px-10 py-3 shadow-lg shadow-orange-500/20" onclick="handleSaveOrSubmit()">
                                 <span id="saveBtnText">Submit Target</span>
                             </button>
@@ -227,7 +233,7 @@
         if (typeof currentSpcrId !== 'undefined' && currentSpcrId) {
             showAlert(
                 'Existing Document Found',
-                `An SPCR document already exists for ${currentYear}, ${currentSemester === 1 ? '1st Semester' : '2nd Semester'}. Please open the existing document instead of creating a new one.`,
+                `An SPCR document already exists for ${currentYear}, ${periodLabel(currentSemester)}. Please open the existing document instead of creating a new one.`,
                 'info'
             );
             return;
@@ -238,7 +244,7 @@
         $('#spcrDate').val(new Date().toISOString().split('T')[0]);
         $('#spcrDateDone').val('');
         $('#displaySpcrId').text('NEW_DOCUMENT');
-        $('#modalTitle').text(`CREATE SPCR ${currentYear} - ${currentSemester == 1 ? '1st' : '2nd'} Sem`);
+        $('#modalTitle').text(`CREATE SPCR ${currentYear} - ${periodLabel(currentSemester, true)}`);
         
         // Clear tables
         $('#core-entries tr:not(:first), #support-entries tr:not(:first), #strategic-entries tr:not(:first)').remove();
@@ -253,7 +259,7 @@
         updateButtonText('Draft Target');
         
         $('#approveBtn').hide();
-        $('#handleSaveBtn').show();
+        $('#handleSaveBtn, #saveDraftBtn').show();
         $('#spcrModal').modal('show');
     }
 
@@ -289,7 +295,7 @@
     }
 
     function handleSaveOrSubmit() {
-        saveSpcr(true); // Always submit based on user request "no more saving of draft"
+        saveSpcr(true); // Unfinished forms use "Save as Draft" instead
     }
 
     function isValidRatingValue(rawValue) {
@@ -314,13 +320,14 @@
         return isValid;
     }
 
-    function saveSpcr(isSubmit = true) {
+    // Drafts skip the required-entry checks so unfinished forms can be saved and continued later.
+    function saveSpcr(isSubmit = true, isDraft = false) {
         if (!validateAllRatings(true)) return;
 
         const coreEntries = getEntriesFromTable('#core-entries');
         const supportEntries = getEntriesFromTable('#support-entries');
         const strategicEntries = getEntriesFromTable('#strategic-entries');
-        const requiredFieldErrors = validateRequiredSpcrFields({
+        const requiredFieldErrors = isDraft ? [] : validateRequiredSpcrFields({
             core_entries: coreEntries,
             support_entries: supportEntries,
             strategic_entries: strategicEntries
@@ -336,7 +343,7 @@
         if (supportEntries.length < 1) missingSections.push('Support Entries');
         if (strategicEntries.length < 1) missingSections.push('Strategic Entries');
 
-        if (missingSections.length > 0) {
+        if (!isDraft && missingSections.length > 0) {
             showAlert(
                 'Incomplete SPCR Entries',
                 `Please provide at least one entry for the following section(s): ${missingSections.join(', ')}. Empty rows are not saved.`,
@@ -348,7 +355,10 @@
         let currentStatus = $('#statusValue').val();
         let targetStatus = currentStatus;
 
-        if (isSubmit) {
+        if (isDraft) {
+            // A draft saved after the targets were approved starts the accomplishment draft.
+            if (currentStatus === 'Target Approved') targetStatus = 'Draft Accomplishment';
+        } else if (isSubmit) {
             if (currentStatus === 'Draft Target') {
                 targetStatus = 'Target Submitted';
             } else if (currentStatus === 'Target Approved' || currentStatus === 'Draft Accomplishment') {
@@ -374,11 +384,11 @@
             const phase = targetStatus.includes('Target') ? 'Target' : 'Accomplishment';
             confirmAction(`Submit ${phase}?`, `Are you sure you want to submit this ${phase} for review?`, 'SUBMIT', () => performSave(url, method, payload, true));
         } else {
-            performSave(url, method, payload, false);
+            performSave(url, method, payload, false, isDraft);
         }
     }
 
-    function performSave(url, method, payload, isSubmit) {
+    function performSave(url, method, payload, isSubmit, isDraft = false) {
         fetch(url, {
             method: method,
             headers: {
@@ -403,7 +413,7 @@
             return data;
         })
         .then(data => {
-            toast(isSubmit ? 'SPCR Submitted!' : 'SPCR Saved Successfully');
+            toast(isSubmit ? 'SPCR Submitted!' : (isDraft ? 'SPCR saved as draft.' : 'SPCR Saved Successfully'));
             $('#spcrModal').modal('hide');
             if (typeof loadSpcrBySemester === 'function') loadSpcrBySemester();
         })
@@ -503,7 +513,7 @@
                 $('#spcrDate').val(spcr.spcr_date || '');
                 $('#spcrDateDone').val(spcr.date_done || '');
                 $('#displaySpcrId').text(`SPCR-${String(spcr.id).padStart(5, '0')}`);
-                $('#modalTitle').text(`SPCR ${spcr.year} - ${spcr.semester == 1 ? '1st' : '2nd'} Semester`);
+                $('#modalTitle').text(`SPCR ${spcr.year} - ${periodLabel(spcr.semester)}`);
                 $('#raterName').text(spcr.division_head?.name || '---');
 
                 populateTable('#core-entries', spcr.entries.filter(e => e.category === 'core'));
@@ -554,6 +564,11 @@
                     }
                 }
 
+                // Only the owner can save a draft, and only while the form is in a draft phase.
+                const isOwner = spcr.userid == userId;
+                $('#saveDraftBtn').toggle(isOwner && !isStaffReviewMode() && !canApprove
+                    && ['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(spcr.status));
+
                 $('#spcrModal').modal('show');
             });
     }
@@ -595,13 +610,18 @@
 
         // Reset all
         $('#spcrModal textarea, #spcrModal input').prop('disabled', true).addClass('bg-gray-50/50 cursor-not-allowed');
-        $('.delete-row-btn, .add-row-btn').hide();
+        $('.delete-row-btn, .add-row-btn, .row-select, .row-bulk-actions').hide();
+        // Row selection follows the per-row delete buttons.
+        const enableRowSelection = () => {
+            $('.row-select, .row-select-all').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            $('.delete-row-btn, .add-row-btn, .row-select, .row-bulk-actions').show();
+        };
 
         if (isTargetDraft) {
             settingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             $('#spcrDate').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
-            $('.delete-row-btn, .add-row-btn').show();
+            enableRowSelection();
         } else if (isAccompDraft || (isReadOnly && window.isSpcrStaffEditMode)) {
             // Accomplishment phase, or staff editor bypassing read-only lock
             evaluationInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
@@ -611,7 +631,7 @@
                 ratingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             }
             if (window.isSpcrStaffEditMode) {
-                $('.delete-row-btn, .add-row-btn').show();
+                enableRowSelection();
             }
         } else if (isReadOnly) {
             // Standard approver: allow rating input at applicable stages

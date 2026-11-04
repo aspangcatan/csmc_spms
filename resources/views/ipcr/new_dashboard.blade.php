@@ -3,6 +3,10 @@
 @section('title', 'SPMS Dashboard')
 
 @section('content')
+@php
+    // The selected filters travel with every link to another page.
+    $periodQuery = ['year' => $year, 'semester' => $semester];
+@endphp
 <div class="max-w-7xl mx-auto">
     
     {{-- 🔹 Role-Based Greeting & Filters --}}
@@ -35,8 +39,7 @@
                 <div class="flex items-center gap-2">
                     <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none">Semester</p>
                     <select id="dashboardSemester" class="bg-transparent border-0 p-0 text-xs font-black text-gray-900 focus:ring-0 cursor-pointer">
-                        <option value="1" {{ $semester == 1 ? 'selected' : '' }}>1st Sem</option>
-                        <option value="2" {{ $semester == 2 ? 'selected' : '' }}>2nd Sem</option>
+                        @include('partials.period_options', ['selected' => $semester, 'short' => true])
                     </select>
                 </div>
             </div>
@@ -52,7 +55,7 @@
         {{-- Period Rating (Affected by Filters) --}}
         <div class="card-modern p-6 relative overflow-hidden group">
             <div class="absolute -top-4 -right-4 w-20 h-20 bg-orange-50 rounded-full blur-2xl group-hover:bg-orange-100 transition-colors"></div>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Rating ({{ $year }} S{{ $semester }})</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Rating ({{ $year }} {{ Period::shortLabel($semester) }})</p>
             <div class="flex items-end gap-2">
                 <h3 class="text-3xl font-black text-gray-900 leading-none">
                     {{ number_format($latestIpcr->final_rating ?? 0, 2) }}
@@ -69,7 +72,7 @@
         {{-- Submission Status for Filtered Period --}}
         <div class="card-modern p-6 relative overflow-hidden group">
             <div class="absolute -top-4 -right-4 w-20 h-20 bg-blue-50 rounded-full blur-2xl group-hover:bg-blue-100 transition-colors"></div>
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Period Status ({{ $year }} S{{ $semester }})</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Period Status ({{ $year }} {{ Period::shortLabel($semester) }})</p>
             <div class="flex items-center gap-3">
                 @php
                     $status = $filteredIpcr->status ?? 'NOT SUBMITTED';
@@ -99,7 +102,7 @@
             {{-- Supervisor: Team Compliance --}}
             <div class="card-modern p-6 relative overflow-hidden group">
                 <div class="absolute -top-4 -right-4 w-20 h-20 bg-purple-50 rounded-full blur-2xl group-hover:bg-purple-100 transition-colors"></div>
-                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Team Compliance ({{ $year }} S{{ $semester }})</p>
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Team Compliance ({{ $year }} {{ Period::shortLabel($semester) }})</p>
                 <div class="flex items-end gap-2">
                     <h3 class="text-3xl font-black text-gray-900 leading-none">
                         {{ number_format($supervisorStats['compliance_rate'], 0) }}%
@@ -122,7 +125,7 @@
                         {{ $supervisorStats['pending_approvals'] }}
                     </h3>
                     @if($supervisorStats['pending_approvals'] > 0)
-                        <a href="{{ route('ipcr.staff') }}" class="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline animate-pulse">
+                        <a href="{{ route('ipcr.staff', $periodQuery) }}" class="text-[10px] font-black text-orange-500 uppercase tracking-widest hover:underline animate-pulse">
                             Needs Review
                         </a>
                     @else
@@ -184,7 +187,7 @@
             @if($supervisorStats)
                 {{-- REAL Rating Distribution --}}
                 <div class="card-modern p-8">
-                    <h3 class="text-sm font-black text-gray-900 tracking-widest uppercase mb-6">Staff Ratings distribution ({{ $year }} S{{ $semester }})</h3>
+                    <h3 class="text-sm font-black text-gray-900 tracking-widest uppercase mb-6">Staff Ratings distribution ({{ $year }} {{ Period::shortLabel($semester) }})</h3>
                     <div class="space-y-5">
                         @php
                             $distColors = [
@@ -218,7 +221,7 @@
                     </div>
                     
                     <button class="w-full mt-8 py-4 px-6 bg-gray-900 text-white rounded-2xl font-bold text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200"
-                            onclick="window.location.href='{{ route('ipcr.staff') }}'">
+                            onclick="window.location.href='{{ route('ipcr.staff', $periodQuery) }}'">
                         Review Team Data
                     </button>
                 </div>
@@ -239,10 +242,10 @@
                                 @endphp
                             </p>
                             <p class="text-xs text-gray-400 font-medium leading-relaxed mb-6">
-                                Your latest IPCR ({{ $globalIpcr->year }} S{{ $globalIpcr->semester }}) is current.
+                                Your latest IPCR ({{ $globalIpcr->year }} {{ Period::shortLabel($globalIpcr->semester) }}) is current.
                             </p>
                             <button class="py-3 px-6 bg-white text-black rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-lg"
-                                    onclick="window.location.href='{{ url('/ipcr') }}'">
+                                    onclick="window.location.href='{{ url('/ipcr') . '?' . http_build_query(['year' => $globalIpcr->year, 'semester' => $globalIpcr->semester]) }}'">
                                 View Current
                             </button>
                         @else
@@ -251,7 +254,7 @@
                                 You haven't created any IPCR records yet. start your performance journey.
                             </p>
                             <button class="py-3 px-6 bg-orange-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20"
-                                    onclick="window.location.href='{{ url('/ipcr') }}'">
+                                    onclick="window.location.href='{{ url('/ipcr') . '?' . http_build_query($periodQuery) }}'">
                                 Create First IPCR
                             </button>
                         @endif
@@ -282,7 +285,7 @@
             gradient.addColorStop(0, 'rgba(240, 106, 56, 0.2)');
             gradient.addColorStop(1, 'rgba(240, 106, 56, 0)');
 
-            const labels = historyData.map(h => `${h.year}-S${h.semester}`);
+            const labels = historyData.map(h => `${h.year} ${periodLabel(h.semester, true)}`);
             const ratings = historyData.map(h => h.final_rating);
 
             new Chart(ctx, {

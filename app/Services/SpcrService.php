@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Spcr;
 use App\Models\User;
+use App\Support\Period;
 use Illuminate\Support\Facades\DB;
 
 class SpcrService
@@ -26,14 +27,15 @@ class SpcrService
 
             $user = User::find($data['userid']);
             $signatories = $this->getAutomatedSignatories($user);
+            [$defaultFrom, $defaultTo] = Period::range($data['year'], $data['semester']);
 
             $spcrData = [
                 'userid' => $data['userid'],
                 'division_id' => $user->division,
                 'year' => $data['year'],
                 'semester' => $data['semester'],
-                'period_from' => $data['period_from'] ?? ($data['semester'] == 1 ? "{$data['year']}-01-01" : "{$data['year']}-07-01"),
-                'period_to' => $data['period_to'] ?? ($data['semester'] == 1 ? "{$data['year']}-06-30" : "{$data['year']}-12-31"),
+                'period_from' => $data['period_from'] ?? $defaultFrom,
+                'period_to' => $data['period_to'] ?? $defaultTo,
                 'spcr_date' => $data['spcr_date'] ?? null,
                 'date_done' => $data['date_done'] ?? null,
                 'supervisor_id' => $signatories['supervisor_id'],
@@ -56,7 +58,7 @@ class SpcrService
 
             $spcr->logs()->create([
                 'subject' => 'SPCR Created',
-                'content' => "SPCR created for Year {$spcr->year} Sem {$spcr->semester}.",
+                'content' => "SPCR created for Year {$spcr->year} " . Period::label($spcr->semester) . ".",
                 'updated_by' => $data['userid']
             ]);
 
@@ -277,7 +279,8 @@ class SpcrService
         return $spcr;
     }
 
-    public function approveSpcr($id, $userId, $remarks = null)
+    // $signature is required at the PMT stage and prints in the CSMC PMT box.
+    public function approveSpcr($id, $userId, $remarks = null, $signature = null)
     {
         $spcr = Spcr::findOrFail($id);
         $actingUser = User::find($userId);
@@ -302,7 +305,7 @@ class SpcrService
             $newStatus = 'Division Head Approved';
         } elseif ($oldStatus === 'Division Head Approved') {
             // Every PMT member must approve; the status only moves on the last approval.
-            [$approved, $total] = app(PmtApprovalService::class)->approve('spcr', (int) $spcr->id, (int) $userId);
+            [$approved, $total] = app(PmtApprovalService::class)->approve('spcr', (int) $spcr->id, (int) $userId, $signature);
             if ($approved < $total) {
                 $spcr->logs()->create([
                     'subject' => "PMT Approval ({$approved}/{$total})",
@@ -448,6 +451,8 @@ class SpcrService
         if (!empty($sectionFilter)) {
             $staffQuery->where('section', $sectionFilter);
         }
+
+        $staffQuery->search($filters['search'] ?? null);
 
         if (!$isAdmin) {
             $divisionId = $user->division;

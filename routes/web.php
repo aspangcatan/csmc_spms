@@ -53,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/bulk-approve', [IpcrController::class, 'bulkApprove']);
         Route::post('/{id}/approve', [IpcrController::class, 'approve']);
         Route::post('/{id}/submit', [IpcrController::class, 'submit']);
+        Route::post('/{id}/review', [IpcrController::class, 'markReviewed']);
         Route::get('/{id}', [IpcrController::class, 'show']);
         Route::get('/{id}/logs', [IpcrController::class, 'getLogs']);
         Route::get('/supervisors', [IpcrController::class, 'getSupervisors']);
@@ -67,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/spcr/{id}/print', [\App\Http\Controllers\SpcrController::class, 'print'])->name('spcr.print.legacy');
     Route::get('/division-head/approvals', [DivisionHeadApprovalController::class, 'index'])->name('division_head.approvals');
     Route::post('/division-head/decide', [DivisionHeadApprovalController::class, 'decide'])->name('division_head.decide');
+    Route::get('/pmt/dashboard', [PmtApprovalController::class, 'dashboard'])->name('pmt.dashboard');
     Route::get('/pmt/approvals', [PmtApprovalController::class, 'index'])->name('pmt.approvals');
     Route::post('/pmt/decide', [PmtApprovalController::class, 'decide'])->name('pmt.decide');
     Route::prefix('api/spcr')->group(function () {

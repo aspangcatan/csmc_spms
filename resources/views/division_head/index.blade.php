@@ -76,7 +76,7 @@
                                 <p class="text-xs font-bold text-gray-700">{{ $ipcr->user->section_name ?? 'N/A' }}</p>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-xs font-bold text-gray-700">FY {{ $ipcr->year }} - {{ $ipcr->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                                <p class="text-xs font-bold text-gray-700">FY {{ $ipcr->year }} - {{ Period::shortLabel($ipcr->semester) }}</p>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
@@ -91,7 +91,7 @@
                                         <i class="fas fa-print"></i>
                                     </a>
                                     <button type="button"
-                                            onclick="openReview('ipcr', {{ $ipcr->id }}, @js($ipcr->user->name ?? 'Unknown User'), @js('FY ' . $ipcr->year . ' - ' . ($ipcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            onclick="openReview('ipcr', {{ $ipcr->id }}, @js($ipcr->user->name ?? 'Unknown User'), @js('FY ' . $ipcr->year . ' - ' . Period::shortLabel($ipcr->semester)))"
                                             class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
                                             title="View details, add remarks, approve or reject">
                                         <i class="fas fa-eye"></i> Review
@@ -160,7 +160,7 @@
                                 <p class="text-xs font-bold text-gray-700">{{ $spcr->user->section_name ?? 'N/A' }}</p>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-xs font-bold text-gray-700">FY {{ $spcr->year }} - {{ $spcr->semester == 1 ? '1st' : '2nd' }} Sem</p>
+                                <p class="text-xs font-bold text-gray-700">FY {{ $spcr->year }} - {{ Period::shortLabel($spcr->semester) }}</p>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center py-1.5 px-3 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-purple-100">
@@ -175,7 +175,7 @@
                                         <i class="fas fa-print"></i>
                                     </a>
                                     <button type="button"
-                                            onclick="openReview('spcr', {{ $spcr->id }}, @js($spcr->user->name ?? 'Unknown User'), @js('FY ' . $spcr->year . ' - ' . ($spcr->semester == 1 ? '1st' : '2nd') . ' Sem'))"
+                                            onclick="openReview('spcr', {{ $spcr->id }}, @js($spcr->user->name ?? 'Unknown User'), @js('FY ' . $spcr->year . ' - ' . Period::shortLabel($spcr->semester)))"
                                             class="px-4 h-10 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-sm flex items-center gap-2"
                                             title="View details, add remarks, approve or reject">
                                         <i class="fas fa-eye"></i> Review

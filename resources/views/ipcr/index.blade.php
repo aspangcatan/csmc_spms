@@ -71,15 +71,14 @@
                             <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Year</label>
                             <select id="yearFilter" class="form-select text-sm border-gray-200 rounded-lg focus:ring-orange-200 focus:border-orange-500 w-full">
                                 @for ($y = date('Y'); $y >= 2023; $y--)
-                                    <option value="{{ $y }}">{{ $y }}</option>
+                                    <option value="{{ $y }}" {{ (int) request('year', date('Y')) === $y ? 'selected' : '' }}>{{ $y }}</option>
                                 @endfor
                             </select>
                         </div>
                         <div class="flex-1 sm:flex-none">
-                            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Semester</label>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Period</label>
                             <select id="semesterFilter" class="form-select text-sm border-gray-200 rounded-lg focus:ring-orange-200 focus:border-orange-500 w-full">
-                                <option value="1">1st Semester</option>
-                                <option value="2">2nd Semester</option>
+                                @include('partials.period_options', ['selected' => request('semester', 1)])
                             </select>
                         </div>
                     </div>
@@ -106,7 +105,7 @@
                     <div class="text-center text-gray-300 text-sm py-12">
                         <i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i>
                         <p class="font-medium">No IPCR selected for this period.</p>
-                        <p class="text-xs">Select a year and semester to view history.</p>
+                        <p class="text-xs">Select a year and period to view history.</p>
                     </div>
                 </div>
             </div>
@@ -146,7 +145,7 @@
                     loadIPCR(currentIpcrId);
                     $('#ipcrModal').modal('show');
                 } else {
-                    showAlert('No Document', 'No IPCR found for the selected year and semester.', 'info');
+                    showAlert('No Document', 'No IPCR found for the selected year and period.', 'info');
                 }
             });
 
@@ -231,7 +230,7 @@
 
         function displayNoIpcrMessage() {
             $('#ipcrLogsContainer').html(
-                '<div class="text-center text-gray-300 text-sm py-12"><i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i><p class="font-medium">No IPCR found for this period.</p><p class="text-xs">Click CREATE IPCR to get started or select another semester.</p></div>'
+                '<div class="text-center text-gray-300 text-sm py-12"><i class="fas fa-folder-open text-4xl mb-4 block opacity-20"></i><p class="font-medium">No IPCR found for this period.</p><p class="text-xs">Click CREATE IPCR to get started or select another period.</p></div>'
             );
         }
 
@@ -239,7 +238,7 @@
             if (currentIpcrId) {
                 showAlert(
                     'Existing Document Found',
-                    `An IPCR document already exists for ${currentYear}, ${currentSemester === 1 ? '1st Semester' : '2nd Semester'}. Please open the existing document instead of creating a new one.`,
+                    `An IPCR document already exists for ${currentYear}, ${periodLabel(currentSemester)}. Please open the existing document instead of creating a new one.`,
                     'info'
                 );
                 return;
@@ -254,7 +253,7 @@
 
         function deleteIpcr() {
             if (!currentIpcrId) {
-                showAlert('Action Required', 'No IPCR found for the selected year and semester.', 'info');
+                showAlert('Action Required', 'No IPCR found for the selected year and period.', 'info');
                 return;
             }
 

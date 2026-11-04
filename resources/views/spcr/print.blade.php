@@ -216,10 +216,6 @@
             z-index: 1000;
         }
 
-        .pmt-stamp img {
-            width: 180px;
-            height: auto;
-        }
         #spcr-entries tbody tr {
             page-break-inside: avoid;
             break-inside: avoid;
@@ -241,10 +237,10 @@
 
             $periodFrom = $spcr->period_from
                 ? \Carbon\Carbon::parse($spcr->period_from)->format('F Y')
-                : ($spcr->semester == 1 ? "January {$year}" : "July {$year}");
+                : \Carbon\Carbon::parse(\App\Support\Period::range($year, $spcr->semester)[0])->format('F Y');
             $periodTo = $spcr->period_to
                 ? \Carbon\Carbon::parse($spcr->period_to)->format('F Y')
-                : ($spcr->semester == 1 ? "June {$year}" : "December {$year}");
+                : \Carbon\Carbon::parse(\App\Support\Period::range($year, $spcr->semester)[1])->format('F Y');
 
             $spcrDateDisplay = $spcr->spcr_date ? \Carbon\Carbon::parse($spcr->spcr_date)->format('F j, Y') : '';
             $spcrDateDoneDisplay = $spcr->date_done ? \Carbon\Carbon::parse($spcr->date_done)->format('F j, Y') : '';
@@ -632,7 +628,7 @@
             </table>
 
             <div class="pmt-stamp">
-                <img src="{{ asset('img/img_pmt.png') }}" alt="PMT Stamp">
+                @include('partials.pmt_signature_box', ['signatures' => $pmtSignatures, 'record' => $spcr])
             </div>
         </div>
     </div>

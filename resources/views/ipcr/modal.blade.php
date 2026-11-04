@@ -70,6 +70,8 @@
                     <input type="hidden" id="ipcrId" value="">
 
 
+                    @include('partials.row_bulk_delete', ['modalId' => 'ipcrModal'])
+
                     {{-- IPCR Table --}}
                     <div class="card-modern overflow-hidden border-0">
                         <table class="w-full text-[11px]">
@@ -208,6 +210,10 @@
                         <button id="approveBtn" class="btn btn-orange bg-emerald-500 hover:bg-emerald-600 px-8 py-3 shadow-lg shadow-emerald-500/20" style="display: none;" onclick="handleApprove()">
                             Approve Now
                         </button>
+                        <button id="saveDraftBtn" class="btn btn-outline-modern bg-white border-gray-200 px-6 py-3" style="display: none;" onclick="saveChanges(false, true)"
+                                title="Save your entries without submitting them for review">
+                            <i class="fas fa-save mr-2 opacity-50"></i> Save as Draft
+                        </button>
                         <button id="handleSaveBtn" class="btn btn-orange px-10 py-3 shadow-lg shadow-orange-500/20" onclick="handleSaveOrSubmit()">
                             <span id="saveBtnText">Save Document</span>
                         </button>
@@ -242,12 +248,17 @@
                 $('#ipcrDate').val(new Date().toISOString().split('T')[0]);
                 $('#dateDone').val('');
                 
-                const semesterText = window.currentCreatingSemester == 1 ? '1st Semester - Target Setting' : '2nd Semester - Accomplishment';
+                const semesterText = window.currentCreatingSemester == 1 ? '1st Semester - Target Setting'
+                    : window.currentCreatingSemester == 2 ? '2nd Semester - Accomplishment'
+                    : periodLabel(window.currentCreatingSemester);
                 $('#modalTitle').text(`IPCR ${window.currentCreatingYear} - ${semesterText}`);
-                
+
                 updateStatusIndicator('Draft Target');
                 toggleSemesterFields('Draft Target');
                 updateButtonText('Draft Target');
+                updateDraftButton('Draft Target', true);
+                $('#approveBtn').hide();
+                $('#supervisorCommentSection').addClass('hidden');
                 
                 // Clear existing rows
                 $("#core-functions tr:gt(0)").remove();
@@ -371,14 +382,15 @@
         saveChanges(isSubmit);
     }
 
-    function saveChanges(isSubmit = false) {
+    // Drafts skip the required-entry checks so unfinished forms can be saved and continued later.
+    function saveChanges(isSubmit = false, isDraft = false) {
         const semester = parseInt($('#ipcrSemester').val());
         const year = parseInt($('#ipcrYear').val());
         const ipcrId = $('#ipcrId').val();
         const coreFunctions = collectRows("#core-functions");
         const supportFunctions = collectRows("#support-functions");
         const strategicFunctions = collectRows("#strategic-functions");
-        const requiredFieldErrors = validateRequiredIpcrFields({
+        const requiredFieldErrors = isDraft ? [] : validateRequiredIpcrFields({
             core_functions: coreFunctions,
             support_functions: supportFunctions,
             strategic_functions: strategicFunctions
@@ -409,7 +421,7 @@
         if (supportFunctions.length < 1) missingSections.push('Support Functions');
         if (strategicFunctions.length < 1) missingSections.push('Strategic Functions');
 
-        if (missingSections.length > 0) {
+        if (!isDraft && missingSections.length > 0) {
             showAlert(
                 'Incomplete IPCR Entries',
                 `Please provide at least one entry for the following section(s): ${missingSections.join(', ')}. Empty rows are not saved.`,
@@ -417,17 +429,23 @@
             );
             return;
         }
-        
+
+        let status = $('#statusValue').val() || "Draft Target";
+        // A draft saved after the targets were approved starts the accomplishment draft.
+        if (isDraft && status === 'Target Approved') status = 'Draft Accomplishment';
+        const period = periodRange(year, semester);
+
         let payload = {
+            draft: isDraft,
             ipcr: {
                 userid: window.ipcrOwnerUserId || window.authUserId,
-                period_from: semester === 1 ? `${year}-01-01` : `${year}-07-01`,
-                period_to: semester === 1 ? `${year}-06-30` : `${year}-12-31`,
+                period_from: period.from,
+                period_to: period.to,
                 year: year,
                 semester: semester,
                 ipcr_date: $('#ipcrDate').val(),
                 date_done: $('#dateDone').val(),
-                status: $('#statusValue').val() || "Draft Target",
+                status: status,
                 comments: $('#supervisor_comments').val(),
                 core_percentage_distribution: 50,
                 support_percentage_distribution: 10,
@@ -486,7 +504,7 @@
             })
             .then(data => {
                 if (data) {
-                    toast(isSubmit ? "IPCR submitted successfully!" : "IPCR saved successfully!");
+                    toast(isSubmit ? "IPCR submitted successfully!" : (isDraft ? "IPCR saved as draft." : "IPCR saved successfully!"));
                     $('#ipcrModal').modal('hide');
                     if (typeof loadIpcrBySemester === 'function') {
                         loadIpcrBySemester();
@@ -591,8 +609,7 @@
                 $('#dateDone').val(ipcr.date_done || '');
 
                 // Update modal title
-                const semesterText = ipcr.semester == 1 ? '1st Semester' : '2nd Semester';
-                $('#modalTitle').text(`IPCR ${ipcr.year || ''} - ${semesterText}`);
+                $('#modalTitle').text(`IPCR ${ipcr.year || ''} - ${periodLabel(ipcr.semester)}`);
 
                 // Store original owner for payload use
                 window.ipcrOwnerUserId = ipcr.userid;
@@ -661,6 +678,7 @@
                 } else {
                     $('#handleSaveBtn').show();
                 }
+                updateDraftButton(ipcr.status, ipcr.userid == authUserId && !window.isStaffEditMode);
             })
             .catch(err => {
                 console.error(err);
@@ -689,12 +707,13 @@
         // 👮 Ownership Check: If NOT the creator, strictly lock EVERYTHING Table-related
         if (!isOwner) {
             $('#ipcrModal table input, #ipcrModal table textarea, #ipcrModal table select').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
-            $('.delete-row-btn, .dropdown').hide(); // Hide Add/Delete buttons
+            $('.delete-row-btn, .dropdown, .row-select, .row-bulk-actions').hide(); // Hide Add/Delete buttons
             return;
         }
 
         // Show modification buttons for owners
-        $('.delete-row-btn, .dropdown').show();
+        $('.delete-row-btn, .dropdown, .row-select, .row-bulk-actions').show();
+        $('.row-select').prop('disabled', false);
         
         // Target Phase Logic
         const isReadOnly = ['Accomplishment Submitted', 'Supervisor Approved', 'Division Head Approved', 'PMT Approved'].includes(status);
@@ -709,6 +728,7 @@
         // For regular owners, lock everything once submitted; staff editors bypass this
         if (isReadOnly && !window.isStaffEditMode) {
             $('#ipcrModal table input, #ipcrModal table textarea, #ipcrModal table select').prop('disabled', true).addClass('bg-gray-100 cursor-not-allowed');
+            $('.row-bulk-actions').hide();
             return;
         }
 
@@ -736,6 +756,12 @@
         } else {
             btnText.text('Save Changes').show().closest('button').show();
         }
+    }
+
+    // Only the owner can save a draft, and only while the form is in a draft phase.
+    function updateDraftButton(status, isOwner) {
+        const canDraft = isOwner && ['Draft Target', 'Target Approved', 'Draft Accomplishment'].includes(status);
+        $('#saveDraftBtn').toggle(canDraft);
     }
 
     function updateStatusIndicator(currentStatus, pmtProgress = null) {

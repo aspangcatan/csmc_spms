@@ -18,6 +18,9 @@ class Ipcr extends Model
         'division_head',
         'highest_supervisor',
         'pmt_id',
+        'unit_head_reviewed_by',
+        'unit_head_reviewed_at',
+        'unit_head_review_remarks',
         'period_from',
         'period_to',
         'ipcr_date',
@@ -30,6 +33,10 @@ class Ipcr extends Model
         'final_average_rating',
         'final_rating',
         'final_rating_adjective',
+    ];
+
+    protected $casts = [
+        'unit_head_reviewed_at' => 'datetime',
     ];
 
     public function user()
@@ -55,6 +62,11 @@ class Ipcr extends Model
     public function pmt()
     {
         return $this->belongsTo(User::class, 'pmt_id');
+    }
+
+    public function unitHeadReviewer()
+    {
+        return $this->belongsTo(User::class, 'unit_head_reviewed_by');
     }
 
     public function coreFunctions()
