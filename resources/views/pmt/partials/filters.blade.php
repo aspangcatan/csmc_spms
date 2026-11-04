@@ -4,6 +4,10 @@
 --}}
 <form method="GET" action="{{ $action }}" id="pmtFilterForm"
       class="bg-white px-4 py-3 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-end gap-4 mb-6">
+    {{-- Keep the PMT Approvals tab when filtering --}}
+    @if(!empty($show) && $show !== 'pending')
+        <input type="hidden" name="show" value="{{ $show }}">
+    @endif
     <div>
         <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Fiscal Year</p>
         <select name="year" id="pmtYearFilter" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-900 focus:ring-0 cursor-pointer" onchange="this.form.submit()">
@@ -53,7 +57,7 @@
         Apply
     </button>
     @if($month || $division || $section || $search !== '')
-        <a href="{{ $action }}?year={{ $year }}" class="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">
+        <a href="{{ $action }}?{{ http_build_query(array_filter(['year' => $year, 'show' => ($show ?? 'pending') !== 'pending' ? $show : null])) }}" class="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-widest hover:bg-gray-50 transition-all">
             Clear
         </a>
     @endif

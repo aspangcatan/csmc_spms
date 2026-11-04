@@ -15,7 +15,7 @@
                 <i class="fas fa-chart-bar"></i> Dashboard
             </a>
             <div class="bg-white px-4 py-2.5 rounded-2xl border border-gray-100 shadow-sm text-right">
-                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Pending</p>
+                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Awaiting You</p>
                 <p class="text-sm font-black text-gray-900 leading-none">{{ $pendingIpcrs->count() + $pendingSpcrs->count() }}</p>
             </div>
         </div>
@@ -23,13 +23,34 @@
 
     @include('pmt.partials.filters', ['action' => route('pmt.approvals')])
 
+    {{-- View tabs; the filters above carry over --}}
+    @php
+        $tabs = [
+            'pending'  => ['Awaiting My Signature', 'fa-pen'],
+            'mine'     => ['Approved by Me', 'fa-signature'],
+            'approved' => ['All PMT Approved', 'fa-check-circle'],
+        ];
+        $tabQuery = request()->except(['show', 'page']);
+    @endphp
+    <div class="flex flex-wrap gap-2 mb-6">
+        @foreach($tabs as $key => [$tabLabel, $tabIcon])
+            <a href="{{ route('pmt.approvals', $key === 'pending' ? $tabQuery : $tabQuery + ['show' => $key]) }}"
+               class="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm
+                      {{ $show === $key ? 'bg-gray-900 text-white' : 'bg-white border border-gray-100 text-gray-500 hover:text-gray-900' }}">
+                <i class="fas {{ $tabIcon }}"></i> {{ $tabLabel }}
+                <span class="py-0.5 px-2 rounded-full {{ $show === $key ? 'bg-white/20' : 'bg-gray-100' }}">{{ $tabCounts[$key] }}</span>
+            </a>
+        @endforeach
+    </div>
+
+    @if($show === 'pending')
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="card-modern p-6 border-0">
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">IPCR Awaiting PMT</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">IPCR Awaiting Your Signature</p>
             <p class="text-3xl font-black text-gray-900">{{ $pendingIpcrs->count() }}</p>
         </div>
         <div class="card-modern p-6 border-0">
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">SPCR Awaiting PMT</p>
+            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">SPCR Awaiting Your Signature</p>
             <p class="text-3xl font-black text-gray-900">{{ $pendingSpcrs->count() }}</p>
         </div>
     </div>
@@ -199,6 +220,96 @@
             </table>
         </div>
     </div>
+
+    @else
+    {{-- "Approved by Me" / "All PMT Approved": read-only history of signed and fully approved records --}}
+    <div class="card-modern overflow-hidden border-0 bg-white">
+        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">{{ $tabs[$show][0] }}</h2>
+                <p class="text-[10px] text-gray-400 font-bold mt-1">
+                    {{ $show === 'mine' ? 'Records you signed, including those still waiting for other PMT members' : 'Records approved by every PMT member' }}
+                </p>
+            </div>
+            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ $results->total() }} records</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-gray-50/50 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] border-b border-gray-100">
+                        <th class="px-6 py-4">Type</th>
+                        <th class="px-6 py-4">Employee</th>
+                        <th class="px-6 py-4">Period</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Rating</th>
+                        <th class="px-6 py-4">{{ $show === 'mine' ? 'You Signed' : 'Approved' }}</th>
+                        <th class="px-6 py-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @forelse($results as $record)
+                        @php $isDone = $record->status === 'PMT Approved'; @endphp
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="px-6 py-4 text-xs font-black text-gray-500 uppercase">{{ $record->record_type }}</td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-bold text-gray-900">{{ $record->user->name ?? 'Unknown User' }}</p>
+                                <p class="text-[10px] text-gray-400 font-medium">{{ $record->user->division_name ?? '' }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-xs font-bold text-gray-700">FY {{ $record->year }} - {{ Period::shortLabel($record->semester) }}</p>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1 py-1.5 px-3 rounded-full text-[10px] font-black uppercase tracking-widest ring-1 ring-inset
+                                             {{ $isDone ? 'bg-emerald-50 text-emerald-600 ring-emerald-100' : 'bg-amber-50 text-amber-600 ring-amber-100' }}">
+                                    <i class="fas {{ $isDone ? 'fa-check-circle' : 'fa-hourglass-half' }}"></i>
+                                    {{ $isDone ? 'PMT Approved' : 'Waiting for others' }}
+                                </span>
+                                @if($record->pmt_badge)
+                                    <span class="ml-1 inline-flex items-center py-1.5 px-3 rounded-full bg-gray-50 text-gray-500 text-[10px] font-black uppercase tracking-widest ring-1 ring-inset ring-gray-100" title="PMT members who have approved">
+                                        {{ $record->pmt_badge }}
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4">
+                                @if($isDone)
+                                    <p class="text-xs font-black text-gray-900">{{ number_format((float) $record->final_rating, 2) }}</p>
+                                    <p class="text-[10px] text-gray-400 font-medium">{{ $record->final_rating_adjective }}</p>
+                                @else
+                                    <p class="text-xs text-gray-300">—</p>
+                                @endif
+                            </td>
+                            <td class="px-6 py-4 text-xs font-bold text-gray-500 whitespace-nowrap">
+                                {{ ($show === 'mine' && $record->my_signed_at ? $record->my_signed_at : $record->updated_at)->format('M d, Y') }}
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <a href="{{ route($record->record_type . '.print', $record->id) }}" target="_blank"
+                                       class="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-100 transition-all shadow-sm"
+                                       title="View/Print {{ strtoupper($record->record_type) }}">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-6 py-16 text-center">
+                                <p class="text-sm font-bold text-gray-500">
+                                    {{ $show === 'mine' ? 'You have not approved any records for these filters.' : 'No PMT-approved records for these filters.' }}
+                                </p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if($results->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                {{ $results->links() }}
+            </div>
+        @endif
+    </div>
+    @endif
 </div>
 
 @include('partials.approval_review', ['decideUrl' => route('pmt.decide'), 'roleLabel' => 'PMT', 'requireSignature' => true])

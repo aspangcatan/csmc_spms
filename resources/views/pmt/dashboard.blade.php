@@ -47,9 +47,10 @@
             <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <i class="fas fa-hourglass-half text-amber-500"></i> Pending PMT Approval
             </p>
-            <p class="text-3xl font-black text-gray-900 leading-none">{{ $summary['awaiting_pmt'] }}</p>
-            <p class="text-[10px] mt-4 border-t border-gray-50 pt-3 {{ $summary['awaiting_me'] > 0 ? 'text-orange-500 font-bold' : 'text-gray-400' }}">
-                {{ $summary['awaiting_me'] }} awaiting your signature
+            {{-- Per member: records this member already signed no longer count as pending for them --}}
+            <p class="text-3xl font-black {{ $summary['awaiting_me'] > 0 ? 'text-orange-500' : 'text-gray-900' }} leading-none">{{ $summary['awaiting_me'] }}</p>
+            <p class="text-[10px] text-gray-400 mt-4 border-t border-gray-50 pt-3">
+                Awaiting your signature · {{ $summary['signed_awaiting_others'] }} signed by you, waiting for other members
             </p>
         </div>
         <div class="card-modern p-6 border-0">
@@ -115,10 +116,10 @@
         <div class="card-modern overflow-hidden border-0 bg-white">
             <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <h2 class="text-sm font-black text-gray-900 uppercase tracking-widest">Pending PMT Approval</h2>
-                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ $summary['awaiting_pmt'] }} records</span>
+                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">{{ $summary['awaiting_me'] }} awaiting you</span>
             </div>
             <div class="divide-y divide-gray-50 max-h-[480px] overflow-y-auto">
-                @forelse($pending['ipcr']->map(fn ($r) => [$r, 'IPCR'])->concat($pending['spcr']->map(fn ($r) => [$r, 'SPCR']))->sortByDesc(fn ($item) => $item[0]->updated_at) as [$record, $type])
+                @forelse($pending['ipcr']->map(fn ($r) => [$r, 'IPCR'])->concat($pending['spcr']->map(fn ($r) => [$r, 'SPCR']))->reject(fn ($item) => $item[0]->signed_by_me)->sortByDesc(fn ($item) => $item[0]->updated_at) as [$record, $type])
                     <div class="px-6 py-4 flex items-center justify-between gap-4">
                         <div class="min-w-0">
                             <p class="text-sm font-bold text-gray-900 truncate">{{ $record->user->name ?? 'Unknown User' }}</p>
@@ -128,19 +129,13 @@
                             <span class="py-1 px-3 rounded-full bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100 text-[10px] font-black uppercase tracking-widest" title="PMT members who have approved">
                                 PMT {{ $record->pmt_approved_count }}/{{ $pmtTotal }}
                             </span>
-                            @if($record->signed_by_me)
-                                <span class="py-1 px-3 rounded-full bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 text-[10px] font-black uppercase tracking-widest">
-                                    <i class="fas fa-signature"></i> Signed
-                                </span>
-                            @else
-                                <span class="py-1 px-3 rounded-full bg-orange-50 text-orange-600 ring-1 ring-inset ring-orange-100 text-[10px] font-black uppercase tracking-widest">
-                                    <i class="fas fa-pen"></i> Needs your signature
-                                </span>
-                            @endif
+                            <span class="py-1 px-3 rounded-full bg-orange-50 text-orange-600 ring-1 ring-inset ring-orange-100 text-[10px] font-black uppercase tracking-widest">
+                                <i class="fas fa-pen"></i> Needs your signature
+                            </span>
                         </div>
                     </div>
                 @empty
-                    <p class="px-6 py-12 text-center text-sm font-bold text-gray-400">No records waiting for PMT approval.</p>
+                    <p class="px-6 py-12 text-center text-sm font-bold text-gray-400">Nothing is waiting for your signature.</p>
                 @endforelse
             </div>
         </div>
