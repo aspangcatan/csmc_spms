@@ -589,7 +589,7 @@
         });
     };
 
-    // ✅ Rating periods (semesters and quarters), mirrored from App\Support\Period
+    // ✅ Rating periods (semesters and the 3 month period), mirrored from App\Support\Period
     window.PERIODS = @json(\App\Support\Period::forJs());
 
     window.periodLabel = (code, short = false) => {
@@ -597,6 +597,9 @@
         if (!period) return 'Unknown Period';
         return short ? period.short : period.label;
     };
+
+    // The 3 month period's dates are picked in the creation modal instead of derived from the code.
+    window.isCustomPeriod = (code) => !!(window.PERIODS[code] && window.PERIODS[code].custom);
 
     // Returns { from, to } as Y-m-d strings for the period in the given year.
     window.periodRange = (year, code) => {

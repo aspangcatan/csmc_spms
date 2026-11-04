@@ -47,6 +47,20 @@
                             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Employee Performance Tracking System</p>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4">
+                            {{-- 3 Month Period: the user picks the covered dates --}}
+                            <div id="ipcrPeriodWrapper" class="hidden">
+                                <div class="flex items-center gap-4">
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Period From <span class="text-red-500">*</span></label>
+                                        <input type="date" id="ipcrPeriodFrom" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Period To <span class="text-red-500">*</span></label>
+                                        <input type="date" id="ipcrPeriodTo" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                                    </div>
+                                    <div class="h-8 w-px bg-gray-200"></div>
+                                </div>
+                            </div>
                             <div id="ipcrDateWrapper">
                                 <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Created</label>
                                 <input type="date" id="ipcrDate" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
@@ -247,7 +261,9 @@
                 $('#ipcrId').val('');
                 $('#ipcrDate').val(new Date().toISOString().split('T')[0]);
                 $('#dateDone').val('');
-                
+                $('#ipcrPeriodFrom, #ipcrPeriodTo').val('');
+                $('#ipcrPeriodWrapper').toggle(isCustomPeriod(window.currentCreatingSemester));
+
                 const semesterText = window.currentCreatingSemester == 1 ? '1st Semester - Target Setting'
                     : window.currentCreatingSemester == 2 ? '2nd Semester - Accomplishment'
                     : periodLabel(window.currentCreatingSemester);
@@ -390,6 +406,21 @@
         const coreFunctions = collectRows("#core-functions");
         const supportFunctions = collectRows("#support-functions");
         const strategicFunctions = collectRows("#strategic-functions");
+
+        // Semesters derive their dates from the code; the 3 month period uses the picked range.
+        let period = periodRange(year, semester);
+        if (isCustomPeriod(semester)) {
+            period = { from: $('#ipcrPeriodFrom').val(), to: $('#ipcrPeriodTo').val() };
+            if (!period.from || !period.to) {
+                showAlert('Missing Period', 'Please specify the From and To dates of the 3 Month Period.', 'warning');
+                return;
+            }
+            if (period.from > period.to) {
+                showAlert('Invalid Period', 'The Period To date must be on or after the Period From date.', 'warning');
+                return;
+            }
+        }
+
         const requiredFieldErrors = isDraft ? [] : validateRequiredIpcrFields({
             core_functions: coreFunctions,
             support_functions: supportFunctions,
@@ -433,7 +464,6 @@
         let status = $('#statusValue').val() || "Draft Target";
         // A draft saved after the targets were approved starts the accomplishment draft.
         if (isDraft && status === 'Target Approved') status = 'Draft Accomplishment';
-        const period = periodRange(year, semester);
 
         let payload = {
             draft: isDraft,
@@ -607,6 +637,9 @@
 
                 $('#ipcrDate').val(ipcr.ipcr_date || '');
                 $('#dateDone').val(ipcr.date_done || '');
+                $('#ipcrPeriodFrom').val(ipcr.period_from || '');
+                $('#ipcrPeriodTo').val(ipcr.period_to || '');
+                $('#ipcrPeriodWrapper').toggle(isCustomPeriod(ipcr.semester));
 
                 // Update modal title
                 $('#modalTitle').text(`IPCR ${ipcr.year || ''} - ${periodLabel(ipcr.semester)}`);
@@ -690,6 +723,8 @@
         const isAccomplishmentPhase = !['Draft Target', 'Target Submitted'].includes(status);
         $('#ipcrDateWrapper').toggle(!isAccomplishmentPhase);
         $('#dateDoneWrapper').toggle(isAccomplishmentPhase);
+        // The period range is set with the targets and locks with them.
+        $('#ipcrPeriodFrom, #ipcrPeriodTo').prop('disabled', isAccomplishmentPhase || !isOwner);
 
         // Always ensure all columns are visible
         $('.accomplishment-col, .rating-col, .remarks-col').show();

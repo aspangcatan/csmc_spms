@@ -3,35 +3,29 @@
 namespace App\Support;
 
 // Rating periods stored in the `semester` column of ipcrs/spcrs:
-// 1-2 are semesters, 3-6 are the fixed quarters Q1-Q4.
+// 1-2 are semesters, 3 is a 3 month period whose dates are picked on creation.
 class Period
 {
+    const CUSTOM = 3;
+
     const LABELS = [
         1 => '1st Semester',
         2 => '2nd Semester',
-        3 => '1st Quarter (Jan-Mar)',
-        4 => '2nd Quarter (Apr-Jun)',
-        5 => '3rd Quarter (Jul-Sep)',
-        6 => '4th Quarter (Oct-Dec)',
+        3 => '3 Month Period',
     ];
 
     const SHORT_LABELS = [
         1 => '1st Sem',
         2 => '2nd Sem',
-        3 => 'Q1',
-        4 => 'Q2',
-        5 => 'Q3',
-        6 => 'Q4',
+        3 => '3 Mo',
     ];
 
-    // [first month, last month] of each period.
+    // [first month, last month] of each period. For the 3 month period this is only the
+    // default suggested in the creation modal; its real dates are stored in period_from/period_to.
     const MONTHS = [
         1 => [1, 6],
         2 => [7, 12],
         3 => [1, 3],
-        4 => [4, 6],
-        5 => [7, 9],
-        6 => [10, 12],
     ];
 
     public static function codes(): array
@@ -55,9 +49,10 @@ class Period
         return self::SHORT_LABELS[(int) $code] ?? '?';
     }
 
-    public static function isQuarter($code): bool
+    // True when the user picks the period's dates instead of deriving them from the code.
+    public static function isCustom($code): bool
     {
-        return (int) $code >= 3;
+        return (int) $code === self::CUSTOM;
     }
 
     // ['Y-m-d', 'Y-m-d'] date range the period covers in $year.
@@ -83,6 +78,7 @@ class Period
             'label' => self::LABELS[$code],
             'short' => self::SHORT_LABELS[$code],
             'months' => self::MONTHS[$code],
+            'custom' => self::isCustom($code),
         ]])->all();
     }
 }

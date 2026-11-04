@@ -47,6 +47,20 @@
                             <p class="text-xs text-gray-400 font-bold uppercase tracking-widest">Division Performance Tracking System</p>
                         </div>
                         <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center gap-4">
+                            {{-- 3 Month Period: the user picks the covered dates --}}
+                            <div id="spcrPeriodWrapper" class="hidden">
+                                <div class="flex items-center gap-4">
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Period From <span class="text-red-500">*</span></label>
+                                        <input type="date" id="spcrPeriodFrom" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Period To <span class="text-red-500">*</span></label>
+                                        <input type="date" id="spcrPeriodTo" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
+                                    </div>
+                                    <div class="h-8 w-px bg-gray-200"></div>
+                                </div>
+                            </div>
                             <div id="spcrDateWrapper">
                                 <label class="block text-[9px] text-gray-400 uppercase font-black mb-1 tracking-widest">Date Created</label>
                                 <input type="date" id="spcrDate" class="bg-transparent border-0 p-0 text-sm font-bold text-gray-700 focus:ring-0 cursor-pointer">
@@ -243,6 +257,9 @@
         $('#spcrId').val('');
         $('#spcrDate').val(new Date().toISOString().split('T')[0]);
         $('#spcrDateDone').val('');
+        window.spcrPeriodCode = currentSemester;
+        $('#spcrPeriodFrom, #spcrPeriodTo').val('');
+        $('#spcrPeriodWrapper').toggle(isCustomPeriod(currentSemester));
         $('#displaySpcrId').text('NEW_DOCUMENT');
         $('#modalTitle').text(`CREATE SPCR ${currentYear} - ${periodLabel(currentSemester, true)}`);
         
@@ -324,6 +341,19 @@
     function saveSpcr(isSubmit = true, isDraft = false) {
         if (!validateAllRatings(true)) return;
 
+        // Semesters derive their dates from the code; the 3 month period uses the picked range.
+        const isCustom = isCustomPeriod(window.spcrPeriodCode);
+        const periodFrom = $('#spcrPeriodFrom').val();
+        const periodTo = $('#spcrPeriodTo').val();
+        if (isCustom && (!periodFrom || !periodTo)) {
+            showAlert('Missing Period', 'Please specify the From and To dates of the 3 Month Period.', 'warning');
+            return;
+        }
+        if (isCustom && periodFrom > periodTo) {
+            showAlert('Invalid Period', 'The Period To date must be on or after the Period From date.', 'warning');
+            return;
+        }
+
         const coreEntries = getEntriesFromTable('#core-entries');
         const supportEntries = getEntriesFromTable('#support-entries');
         const strategicEntries = getEntriesFromTable('#strategic-entries');
@@ -376,6 +406,10 @@
             support_entries: supportEntries,
             strategic_entries: strategicEntries,
         };
+        if (isCustom) {
+            payload.period_from = periodFrom;
+            payload.period_to = periodTo;
+        }
 
         const method = currentSpcrId ? 'PUT' : 'POST';
         const url = currentSpcrId ? `${window.spcrApiBaseUrl}/${currentSpcrId}` : window.spcrApiBaseUrl;
@@ -512,6 +546,10 @@
                 $('#spcrId').val(spcr.id);
                 $('#spcrDate').val(spcr.spcr_date || '');
                 $('#spcrDateDone').val(spcr.date_done || '');
+                window.spcrPeriodCode = spcr.semester;
+                $('#spcrPeriodFrom').val(spcr.period_from || '');
+                $('#spcrPeriodTo').val(spcr.period_to || '');
+                $('#spcrPeriodWrapper').toggle(isCustomPeriod(spcr.semester));
                 $('#displaySpcrId').text(`SPCR-${String(spcr.id).padStart(5, '0')}`);
                 $('#modalTitle').text(`SPCR ${spcr.year} - ${periodLabel(spcr.semester)}`);
                 $('#raterName').text(spcr.division_head?.name || '---');
@@ -620,7 +658,7 @@
         if (isTargetDraft) {
             settingInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             bulkRowInputs.prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
-            $('#spcrDate').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
+            $('#spcrDate, #spcrPeriodFrom, #spcrPeriodTo').prop('disabled', false).removeClass('bg-gray-50/50 cursor-not-allowed');
             enableRowSelection();
         } else if (isAccompDraft || (isReadOnly && window.isSpcrStaffEditMode)) {
             // Accomplishment phase, or staff editor bypassing read-only lock

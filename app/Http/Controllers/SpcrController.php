@@ -43,8 +43,9 @@ class SpcrController extends Controller
         $validated = $request->validate([
             'year' => 'required|integer',
             'semester' => 'required|integer|' . Period::rule(),
-            'period_from' => 'nullable|date',
-            'period_to' => 'nullable|date',
+            // The 3 month period has no fixed months, so its dates must be given.
+            'period_from' => 'required_if:semester,' . Period::CUSTOM . '|nullable|date',
+            'period_to' => 'required_if:semester,' . Period::CUSTOM . '|nullable|date|after_or_equal:period_from',
             'spcr_date' => 'nullable|date',
             'date_done' => 'nullable|date',
             'status' => 'nullable|string|in:Draft Target,Target Submitted,Target Approved,Draft Accomplishment,Accomplishment Submitted,Supervisor Approved,Division Head Approved,PMT Approved',
@@ -83,6 +84,11 @@ class SpcrController extends Controller
         if (!$authUser->canEditSpcr($spcrObj)) {
             return response()->json(['message' => 'Unauthorized. Only the creator or an assigned approver can update this record.'], 403);
         }
+
+        $request->validate([
+            'period_from' => 'sometimes|date',
+            'period_to' => 'sometimes|date|after_or_equal:period_from',
+        ]);
 
         // Ownership and signatories never change through an update.
         $data = $request->except(['spcr', 'highest_supervisor']);

@@ -19,6 +19,8 @@ use Tests\TestCase;
  */
 class IpcrPmtSimulationTest extends TestCase
 {
+    use DrawsPmtSignatures;
+
     const EMPLOYEE_ID = 1116;
 
     public function periodProvider(): array
@@ -26,7 +28,7 @@ class IpcrPmtSimulationTest extends TestCase
         return [
             '1st Semester' => [1],
             '2nd Semester' => [2],
-            '1st Quarter (Jan-Mar)' => [3],
+            '3 Month Period' => [3],
         ];
     }
 
@@ -47,7 +49,10 @@ class IpcrPmtSimulationTest extends TestCase
         $divisionHead = User::findOrFail($signatories['division_head']);
         $pmtMembers = User::whereIn('id', app(PmtApprovalService::class)->memberIds())->get();
         $this->assertNotEmpty($pmtMembers, 'No PMT members are configured.');
-        [$periodFrom, $periodTo] = Period::range($year, $period);
+        // The 3 month period takes whatever range the employee picks, not a fixed quarter.
+        [$periodFrom, $periodTo] = Period::isCustom($period)
+            ? ["{$year}-02-15", "{$year}-05-14"]
+            : Period::range($year, $period);
 
         // 1. Employee saves an unfinished draft (only one core row, no support/strategic rows yet).
         $response = $this->actingAs($employee)->postJson('/api/ipcr', [
@@ -216,30 +221,5 @@ class IpcrPmtSimulationTest extends TestCase
     protected function assertStatus(int $ipcrId, string $expected): void
     {
         $this->assertSame($expected, Ipcr::findOrFail($ipcrId)->status, "IPCR #{$ipcrId} should be '{$expected}'.");
-    }
-
-    // A hand-drawn-looking stroke, unique per member, as the PNG data URL the signature pad sends.
-    protected function signatureFor(User $member): string
-    {
-        $img = imagecreatetruecolor(300, 100);
-        imagesavealpha($img, true);
-        imagefill($img, 0, 0, imagecolorallocatealpha($img, 0, 0, 0, 127));
-        $ink = imagecolorallocate($img, 17, 24, 39);
-        imagesetthickness($img, 3);
-
-        mt_srand($member->id);
-        [$prevX, $prevY] = [15, 55];
-        for ($x = 21; $x <= 285; $x += 6) {
-            $y = 55 + (int) (25 * sin($x / (10 + $member->id % 7))) + mt_rand(-6, 6);
-            imageline($img, $prevX, $prevY, $x, $y, $ink);
-            [$prevX, $prevY] = [$x, $y];
-        }
-        imageline($img, 30, 88, 270, 84, $ink);
-
-        ob_start();
-        imagepng($img);
-        imagedestroy($img);
-
-        return 'data:image/png;base64,' . base64_encode(ob_get_clean());
     }
 }
