@@ -314,6 +314,11 @@
             <span>Dashboard</span>
         </a>
 
+        <a href="{{ route('training') }}" class="sidebar-item {{ Request::routeIs('training') ? 'active' : '' }}">
+            <i class="fas fa-play-circle"></i>
+            <span>Training</span>
+        </a>
+
         @if(!auth()->user()->headsAnySection() && !auth()->user()->isDivisionHead())
         <a href="{{ url('/ipcr') }}" class="sidebar-item {{ Request::is('ipcr') ? 'active' : '' }}">
             <i class="far fa-file-alt"></i>

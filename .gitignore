@@ -13,3 +13,6 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+
+# Training video (large binary; copy from e-SPMS_VIDEO_TUTORIAL/FINAL_VIDEOS on each server)
+/public/media/training/*.mp4

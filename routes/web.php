@@ -40,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ipcr/print/{id}', [IpcrController::class, 'printIpcr'])->name('ipcr.print');
 
     Route::get('/dashboard-new', [IpcrController::class, 'dashboard'])->name('dashboard.new');
+    Route::view('/training', 'training.index')->name('training');
 
     Route::get('/ipcr/staff', [IpcrController::class, 'staff'])->name('ipcr.staff');
     Route::post('/password/update', [LoginController::class, 'updatePassword'])->name('password.update');

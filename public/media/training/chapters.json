@@ -1,0 +1,148 @@
+{
+  "video": "e-SPMS_Training.mp4",
+  "duration": 2927.7,
+  "parts": [
+    {
+      "title": "Introduction to the e-SPMS",
+      "start": 0,
+      "chapters": [
+        {
+          "title": "Introduction to the e-SPMS",
+          "start": 0
+        }
+      ]
+    },
+    {
+      "title": "Part 1: Whole Process of Creating IPCR",
+      "start": 267.37,
+      "chapters": [
+        {
+          "title": "1. Accessing the IPCR Module",
+          "start": 267.37
+        },
+        {
+          "title": "2. Creating IPCR Performance Targets",
+          "start": 415.17
+        },
+        {
+          "title": "3. Reviewing and Submitting the IPCR",
+          "start": 632.87
+        },
+        {
+          "title": "4. Section Head Approval of Targets",
+          "start": 728.3
+        },
+        {
+          "title": "5. Entering and Submitting Accomplishments",
+          "start": 851.23
+        },
+        {
+          "title": "6. Section Head Approval of Accomplishments",
+          "start": 983.6
+        },
+        {
+          "title": "7. Division Head Approval",
+          "start": 1056.2
+        },
+        {
+          "title": "8. PMT Approval",
+          "start": 1168.7
+        },
+        {
+          "title": "9. Printing the Approved IPCR",
+          "start": 1310.9
+        }
+      ]
+    },
+    {
+      "title": "Part 2: Whole Process of Creating SPCR",
+      "start": 1452.33,
+      "chapters": [
+        {
+          "title": "1. Accessing the SPCR Module",
+          "start": 1452.33
+        },
+        {
+          "title": "2. Creating SPCR Performance Targets",
+          "start": 1527.7
+        },
+        {
+          "title": "3. Reviewing and Submitting the SPCR",
+          "start": 1630.97
+        },
+        {
+          "title": "4. Review and Approval of Targets",
+          "start": 1676.2
+        },
+        {
+          "title": "5. Entering and Submitting Accomplishments",
+          "start": 1749.7
+        },
+        {
+          "title": "6. Supervisor Approval of Accomplishments",
+          "start": 1814.47
+        },
+        {
+          "title": "7. Division Head Approval",
+          "start": 1881.53
+        },
+        {
+          "title": "8. PMT Review and Approval",
+          "start": 1936.4
+        },
+        {
+          "title": "9. Printing the Approved SPCR",
+          "start": 2007.13
+        }
+      ]
+    },
+    {
+      "title": "Part 3: Accomplishment and Performance Review",
+      "start": 2099.63,
+      "chapters": [
+        {
+          "title": "1. Accessing the Accomplishment Stage",
+          "start": 2099.63
+        },
+        {
+          "title": "2. Entering Accomplishments",
+          "start": 2177.4
+        },
+        {
+          "title": "3. Reviewing Accomplishments",
+          "start": 2259.47
+        },
+        {
+          "title": "4. Performance Rating and Evaluation",
+          "start": 2365.4
+        },
+        {
+          "title": "5. Final Review and Printing",
+          "start": 2504.7
+        }
+      ]
+    },
+    {
+      "title": "Part 4: Common System Features and Troubleshooting",
+      "start": 2551.5,
+      "chapters": [
+        {
+          "title": "1. Understanding Document Statuses",
+          "start": 2551.5
+        },
+        {
+          "title": "2. Common Validation Messages",
+          "start": 2630.77
+        },
+        {
+          "title": "3. Returning and Resubmitting Documents",
+          "start": 2732.53
+        },
+        {
+          "title": "4. Approval Queues and Your Account",
+          "start": 2822.17
+        }
+      ]
+    }
+  ]
+}
